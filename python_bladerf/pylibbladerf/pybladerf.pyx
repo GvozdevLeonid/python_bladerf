@@ -218,7 +218,7 @@ class pybladerf_fpga_size(IntEnum):
     PYBLADERF_FPGA_A9 = cbladerf.BLADERF_FPGA_A9
 
     def __str__(self):
-        return self.name
+        return self.name[2:]
 
 
 class pybladerf_dev_speed(IntEnum):
