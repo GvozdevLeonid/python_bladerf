@@ -6,4 +6,4 @@ dist/
 .DS_Store
 .pypirc
 
-*.egg-info
+python_bladerf.egg-info
