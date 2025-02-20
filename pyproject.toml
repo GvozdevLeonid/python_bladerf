@@ -1,6 +1,6 @@
 [project]
 name = "python_bladerf"
-version = "1.0.2"
+version = "1.1.0"
 authors = [
   {name="Leonid Gvozdev", email="leo.gvozdev.dev@gmail.com"},
 ]
@@ -8,11 +8,16 @@ description = "This is a wrapper for bladerf."
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
-    "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: MacOS",
-    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
     "Operating System :: Android",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+]
+dependencies = [
+    "numpy",
 ]
 
 [project.urls]
@@ -21,10 +26,12 @@ classifiers = [
 
 [build-system]
 requires = [
+    "Cython==0.29.37",
     "setuptools",
     "wheel",
     "numpy"
 ]
+
 
 [project.scripts]
 python_bladerf= "python_bladerf.__main__:main"
