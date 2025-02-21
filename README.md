@@ -1,42 +1,36 @@
 # python_bladerf
 
-python_bladerf is a cython wrapper for bladerf (https://github.com/Nuand/bladeRF). It also contains some additional tools.
+python_bladerf is a cython wrapper for [bladerf](https://github.com/Nuand/bladeRF). It also contains some additional tools.
+
+Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file.
 
 You can install this library using
 ```
 pip install python_bladerf
 ```
-Or assemble it manually using the following steps:
 
-In order to build the library you need to go to the python_bladerf directory
+If your bladerf files are in non-standard paths and during installation the python_bladerf cannot find libbladeRF.h and bladeRF2.h or the library files, you can specify the paths via environment variables
 ```
-cd python_bladerf
-```
-call
-```
-python setup.py build_ext --inplace.
-```
-If the build fails, you will need to specify the paths for the libusb library.
-```
-CFLAGS="-I/path to libusb.h -I/path to libbladeRF.h" \
-LDFLAGS="-L/path to libusb-1.0.so -L/path to libBladeRF.so" \
-python setup.py build_ext --inplace
+export PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h_andbladeRF2.h
+export PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib, dll)
 ```
 
 ## Requirements:
 * libusb-1.0 (https://github.com/libusb/libusb)
 * libBladeRF (https://github.com/Nuand/bladeRF)
-* Cython==0.29.36
-* Numpy>=1.26
+* Cython==0.29.37
+* Numpy>=2.2.1
 * Scipy (optional, for faster work)
 * pyFFTW (optional, for faster work)
+* pyjnius and android (only for android)
 
 ## bladerf:
-Almost all the functionality of the standard library is implemented. Some features will be added later. (async recieve and transmit).
+The library supports all bladerf2 functions, some of the functions can also work on the first versions.If there is a demand for full support of the first version, I will add it.
 
 ## pybladerf tools:
 * pybladerf_info.py - Reading information about found devices.
-* pybladerf_sweep.py - Possibility to get extended range fft ( same as hackrf_sweep)
+* pybladerf_sweep.pyx - a function that allows you to obtain a sweep over a given frequency range ( same as hackrf_sweep)
+* pybladerf_transfer.pyx - a function that allows you to record and play back samples
 
 ## usage
 ```
@@ -48,9 +42,10 @@ options:
   -h, --help    show this help message and exit
 
 Available commands:
-  {info,sweep}
+  {info,sweep,transfer}
     info        Read device information from Bladerf such as serial number and FPGA version.
     sweep       a command-line spectrum analyzer.
+    transfer    Send and receive signals using BladeRF. Input/output files consist of complex64 quadrature samples.
 ```
 ```
 usage: python_bladerf info [-h] [-f] [-s]
@@ -62,26 +57,67 @@ options:
                         show only founded device_identifiers
 ```
 ```
-usage: python_bladerf sweep [-h] [-d] [-f] [-g] [-w] [-ch] [-1] [-N] [-o] [-B] [-s] [-SR] [-BW] -[FIR] [-r]
+usage: python_bladerf sweep [-h] [-d] [-f] [-g] [-w] [-c] [-1] [-N] [-o] [-B] [-S] [-s] [-b] [-r]
 
 options:
   -h, --help  show this help message and exit
-  -d          device_identifier. device identifier of desired BladeRF
-  -f          freq_min:freq_max. minimum and maximum frequencies in MHz start:stop. Default is 71:5999
-  -g          gain_db. RX gain, -15 - 60dB, 1dB steps
-  -w          bin_width. FFT bin width (frequency resolution) in Hz, 245-30000000
-  -ch         RX channel. which channel to use (0, 1). Default is 0
+  -d          device identifier of desired BladeRF
+  -f          freq_min:freq_max. minimum and maximum frequencies in MHz start:stop or start1:stop1,start2:stop2. Default
+  -g          RX gain, -15 - 60dB, 1dB steps
+  -w          FFT bin width (frequency resolution) in Hz
+  -c          RX channel. which channel to use (0, 1). Default is 0
   -1          one shot mode. If specified = Enable
-  -N          num_sweeps. Number of sweeps to perform
+  -N          Number of sweeps to perform
   -o          oversample. If specified = Enable
   -B          binary output. If specified = Enable
-  -s          sweep style ("L" - LINEAR, "I" - INTERLEAVED). Default is INTERLEAVED
-  -SR         sample rate in Hz (0.5 MHz - 122 MHz). Default is 57. To use a sample rate higher than 61, specify oversample
-  -BW         bandwidth in Hz (0.2 MHz - 56 MHz). Default is 56000000
-  -FIR        RFIC RX FIR filter ("1" - Enable, "0" - Disable). Default is Disable
+  -S          sweep style ("L" - LINEAR, "I" - INTERLEAVED). Default is INTERLEAVED
+  -s          sample rate in MHz  (0.5 MHz - 122 MHz). Default is 61. To use a sample rate higher than 61, specify oversample
+  -b          baseband filter bandwidth in MHz (0.2 MHz - 56 MHz). Default .75 * sample rate
   -r          filename. output file
 ```
-## Note
-This library probably can work on android. To do this, go to the android directory and download two recipes for p4a.
+```
+python_bladerf transfer [-h] [-d] [-r] [-t] [-f] [-p] [-c] [-g] [-N] [-R] [-s] -[b] [-H] -[o]
+
+options:
+  -d                  serial number of desired HackRF
+  -r                  <filename> receive data into file (use "-" for stdout)
+  -t                  <filename> transmit data from file (use "-" for stdout)
+  -f, --freq_hz       frequency in Hz (0MHz to 6000MHz supported). Default is 900MHz
+  -p                  antenna port power. If specified = Enable
+  -c                  RX or TX channel. which channel to use (0, 1). Default is 0
+  -g                  RX or TX gain, RX: -15 - 60dB, 1dB steps, TX: -24 - 66 dB, 1dB steps
+  -N                  number of samples to transfer (default is unlimited)
+  -R                  repeat TX mode. Fefault is off
+  -s                  sample rate in MHz  (0.5 MHz - 122 MHz). Default is 61. To use a sample rate higher than 61, specify oversample'
+  -b                  baseband filter bandwidth in MHz (0.2 MHz - 56 MHz). Default .75 * sample rate
+  -H                  synchronize RX/TX to external trigger input
+  -o                  oversample. If specified = Enable
+```
+
+## Android
+This library can work on android. To do this, go to the android directory and download 3 recipes for [p4a](https://github.com/kivy/python-for-android).
+
+buildozer.spec
+```
+requirements = python3,android,pyjnius,numpy,libusb,libbladerf,python_bladerf
+p4a.local_recipes = path_to_pythonforandroidrecipes_folder
+```
+
+#### Your recipes folder should contain at least the following files:
+```
+pythonforandroidrecipes/
+    __init__.py
+    libusb/
+        __init__.py
+    python_bladerf/
+        __init__.py
+    libbladerf/
+        __init__.py
+        jni/
+            Android.mk
+            Application.mk
+            libbladerf.mk
+```
+
 ## Examples
-Examples will be added later.
+Please use the original bladerf documentation
