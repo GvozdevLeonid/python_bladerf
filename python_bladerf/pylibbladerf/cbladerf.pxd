@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2024 GvozdevLeonid
+# Copyright (c) 2024-2025 GvozdevLeonid
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,27 @@
 
 from libc.stdint cimport *
 
-cdef extern from "libbladeRF.h" nogil:
+cdef extern from 'bladerf_stream.h' nogil:
+    ctypedef enum bladerf_stream_state:
+        STREAM_IDLE,
+        STREAM_RUNNING,
+        STREAM_SHUTTING_DOWN,
+        STREAM_DONE
+
+    cdef struct bladerf_stream:
+        bladerf *dev
+        bladerf_channel_layout layout
+        bladerf_format format
+        unsigned int transfer_timeout
+        void *user_data
+        size_t samples_per_buffer
+        size_t num_buffers
+        void **buffers
+
+        int error_code
+        bladerf_stream_state state
+
+cdef extern from 'libbladeRF.h' nogil:
 
     cdef struct bladerf:
         pass
@@ -62,21 +82,19 @@ cdef extern from "libbladeRF.h" nogil:
 
     void bladerf_free_device_list(bladerf_devinfo *devices)
 
-    void bladerf_init_devinfo(bladerf_devinfo *info)
-
     int bladerf_get_devinfo(bladerf *dev, bladerf_devinfo *info)
 
     int bladerf_get_backendinfo(bladerf *dev, bladerf_backendinfo *info)
 
     int bladerf_get_devinfo_from_str(char *devstr, bladerf_devinfo *info)
 
-    int bladerf_devinfo_matches(const bladerf_devinfo *a, const bladerf_devinfo *b)
+    bint bladerf_devinfo_matches(const bladerf_devinfo *a, const bladerf_devinfo *b)
 
-    int bladerf_devstr_matches(const char *dev_str, bladerf_devinfo *info)
+    bint bladerf_devstr_matches(const char *dev_str, bladerf_devinfo *info)
 
-    const char* bladerf_backend_str(bladerf_backend backend)
+    char *bladerf_backend_str(bladerf_backend backend)
 
-    void bladerf_set_usb_reset_on_open(int enabled)
+    void bladerf_set_usb_reset_on_open(bint enabled)
 
     cdef struct bladerf_range:
         int64_t min
@@ -111,15 +129,13 @@ cdef extern from "libbladeRF.h" nogil:
         BLADERF_FPGA_SOURCE_FLASH
         BLADERF_FPGA_SOURCE_HOST
 
-    int bladerf_get_serial(bladerf *dev, char *serial)
-
     int bladerf_get_serial_struct(bladerf *dev, bladerf_serial *serial)
 
     int bladerf_get_fpga_size(bladerf *dev, bladerf_fpga_size *size)
 
     int bladerf_get_fpga_bytes(bladerf *dev, size_t *size)
 
-    int bladerf_get_flash_size(bladerf *dev, uint32_t *size, int *is_guess)
+    int bladerf_get_flash_size(bladerf *dev, uint32_t *size, bint *is_guess)
 
     int bladerf_fw_version(bladerf *dev, bladerf_version *version)
 
@@ -133,8 +149,6 @@ cdef extern from "libbladeRF.h" nogil:
 
     const char* bladerf_get_board_name(bladerf *dev)
 
-    ctypedef int bladerf_channel
-
     ctypedef enum bladerf_direction:
         BLADERF_RX
         BLADERF_TX
@@ -147,8 +161,6 @@ cdef extern from "libbladeRF.h" nogil:
 
     size_t bladerf_get_channel_count(bladerf *dev, bladerf_direction dir)
 
-    ctypedef int bladerf_gain
-
     ctypedef enum bladerf_gain_mode:
         BLADERF_GAIN_DEFAULT
         BLADERF_GAIN_MGC
@@ -160,60 +172,54 @@ cdef extern from "libbladeRF.h" nogil:
         const char *name
         bladerf_gain_mode mode
 
-    int bladerf_set_gain(bladerf *dev, bladerf_channel ch, bladerf_gain gain)
+    int bladerf_set_gain(bladerf *dev, int ch, int gain)
 
-    int bladerf_get_gain(bladerf *dev, bladerf_channel ch, bladerf_gain *gain)
+    int bladerf_get_gain(bladerf *dev, int ch, int *gain)
 
-    int bladerf_set_gain_mode(bladerf *dev, bladerf_channel ch, bladerf_gain_mode mode)
+    int bladerf_set_gain_mode(bladerf *dev, int ch, bladerf_gain_mode mode)
 
-    int bladerf_get_gain_mode(bladerf *dev, bladerf_channel ch, bladerf_gain_mode *mode)
+    int bladerf_get_gain_mode(bladerf *dev, int ch, bladerf_gain_mode *mode)
 
-    int bladerf_get_gain_modes(bladerf *dev, bladerf_channel ch, const bladerf_gain_modes **modes)
+    int bladerf_get_gain_modes(bladerf *dev, int ch, const bladerf_gain_modes **modes)
 
-    int bladerf_get_gain_range(bladerf *dev, bladerf_channel ch, const bladerf_range **range)
+    int bladerf_get_gain_range(bladerf *dev, int ch, const bladerf_range **range)
 
-    int bladerf_set_gain_stage(bladerf *dev, bladerf_channel ch, const char *stage, bladerf_gain gain)
+    int bladerf_set_gain_stage(bladerf *dev, int ch, const char *stage, int gain)
 
-    int bladerf_get_gain_stage(bladerf *dev, bladerf_channel ch, const char *stage, bladerf_gain *gain)
+    int bladerf_get_gain_stage(bladerf *dev, int ch, const char *stage, int *gain)
 
-    int bladerf_get_gain_stage_range(bladerf *dev, bladerf_channel ch, const char *stage, const bladerf_range **range)
+    int bladerf_get_gain_stage_range(bladerf *dev, int ch, const char *stage, const bladerf_range **range)
 
-    int bladerf_get_gain_stages(bladerf *dev, bladerf_channel ch, const char **stages, size_t count)
-
-    ctypedef unsigned int bladerf_sample_rate
+    int bladerf_get_gain_stages(bladerf *dev, int ch, const char **stages, size_t count)
 
     cdef struct bladerf_rational_rate:
         uint64_t integer
         uint64_t num
         uint64_t den
 
-    int bladerf_set_sample_rate(bladerf *dev, bladerf_channel ch, bladerf_sample_rate rate, bladerf_sample_rate *actual)
+    int bladerf_set_sample_rate(bladerf *dev, int ch, unsigned int rate, unsigned int *actual)
 
-    int bladerf_set_rational_sample_rate(bladerf *dev, bladerf_channel ch, bladerf_rational_rate *rate, bladerf_rational_rate *actual)
+    int bladerf_set_rational_sample_rate(bladerf *dev, int ch, bladerf_rational_rate *rate, bladerf_rational_rate *actual)
 
-    int bladerf_get_sample_rate(bladerf *dev, bladerf_channel ch, bladerf_sample_rate *rate)
+    int bladerf_get_sample_rate(bladerf *dev, int ch, unsigned int *rate)
 
-    int bladerf_get_sample_rate_range(bladerf *dev, bladerf_channel ch, const bladerf_range **range)
+    int bladerf_get_sample_rate_range(bladerf *dev, int ch, const bladerf_range **range)
 
-    int bladerf_get_rational_sample_rate(bladerf *dev, bladerf_channel ch, bladerf_rational_rate *rate)
+    int bladerf_get_rational_sample_rate(bladerf *dev, int ch, bladerf_rational_rate *rate)
 
-    ctypedef unsigned int bladerf_bandwidth
+    int bladerf_set_bandwidth(bladerf *dev, int ch, unsigned int bandwidth, unsigned int *actual)
 
-    int bladerf_set_bandwidth(bladerf *dev, bladerf_channel ch, bladerf_bandwidth bandwidth, bladerf_bandwidth *actual)
+    int bladerf_get_bandwidth(bladerf *dev, int ch, unsigned int *bandwidth)
 
-    int bladerf_get_bandwidth(bladerf *dev, bladerf_channel ch, bladerf_bandwidth *bandwidth)
+    int bladerf_get_bandwidth_range(bladerf *dev, int ch, const bladerf_range **range)
 
-    int bladerf_get_bandwidth_range(bladerf *dev, bladerf_channel ch, const bladerf_range **range)
+    int bladerf_select_band(bladerf *dev, int ch, uint64_t frequency)
 
-    ctypedef uint64_t bladerf_frequency
+    int bladerf_set_frequency(bladerf *dev, int ch, uint64_t frequency)
 
-    int bladerf_select_band(bladerf *dev, bladerf_channel ch, bladerf_frequency frequency)
+    int bladerf_get_frequency(bladerf *dev, int ch, uint64_t *frequency)
 
-    int bladerf_set_frequency(bladerf *dev, bladerf_channel ch, bladerf_frequency frequency)
-
-    int bladerf_get_frequency(bladerf *dev, bladerf_channel ch, bladerf_frequency *frequency)
-
-    int bladerf_get_frequency_range(bladerf *dev, bladerf_channel ch, const bladerf_range **range)
+    int bladerf_get_frequency_range(bladerf *dev, int ch, const bladerf_range **range)
 
     ctypedef enum bladerf_loopback:
         BLADERF_LB_NONE
@@ -233,7 +239,7 @@ cdef extern from "libbladeRF.h" nogil:
 
     int bladerf_get_loopback_modes(bladerf *dev, const bladerf_loopback_modes **modes)
 
-    int bladerf_is_loopback_mode_supported(bladerf *dev, bladerf_loopback mode)
+    bint bladerf_is_loopback_mode_supported(bladerf *dev, bladerf_loopback mode)
 
     int bladerf_set_loopback(bladerf *dev, bladerf_loopback lb)
 
@@ -250,6 +256,7 @@ cdef extern from "libbladeRF.h" nogil:
         BLADERF_TRIGGER_J71_4
         BLADERF_TRIGGER_J51_1
         BLADERF_TRIGGER_MINI_EXP_1
+
         BLADERF_TRIGGER_USER_0
         BLADERF_TRIGGER_USER_1
         BLADERF_TRIGGER_USER_2
@@ -260,18 +267,18 @@ cdef extern from "libbladeRF.h" nogil:
         BLADERF_TRIGGER_USER_7
 
     cdef struct bladerf_trigger:
-        bladerf_channel channel
+        int channel
         bladerf_trigger_role role
         bladerf_trigger_signal signal
         uint64_t options
 
-    int bladerf_trigger_init(bladerf *dev, bladerf_channel ch, bladerf_trigger_signal signal, bladerf_trigger *trigger)
+    int bladerf_trigger_init(bladerf *dev, int ch, bladerf_trigger_signal signal, bladerf_trigger *trigger)
 
-    int bladerf_trigger_arm(bladerf *dev, const bladerf_trigger *trigger, int arm, uint64_t resv1, uint64_t resv2)
+    int bladerf_trigger_arm(bladerf *dev, const bladerf_trigger *trigger, bint arm, uint64_t resv1, uint64_t resv2)
 
     int bladerf_trigger_fire(bladerf *dev, const bladerf_trigger *trigger)
 
-    int bladerf_trigger_state(bladerf *dev, const bladerf_trigger *trigger, int *is_armed, int *has_fired, int *fire_requested, uint64_t *resv1, uint64_t *resv2)
+    int bladerf_trigger_state(bladerf *dev, const bladerf_trigger *trigger, bint *is_armed, bint *has_fired, bint *fire_requested, uint64_t *resv1, uint64_t *resv2)
 
     ctypedef enum bladerf_rx_mux:
         BLADERF_RX_MUX_INVALID
@@ -283,8 +290,6 @@ cdef extern from "libbladeRF.h" nogil:
     int bladerf_set_rx_mux(bladerf *dev, bladerf_rx_mux mux)
 
     int bladerf_get_rx_mux(bladerf *dev, bladerf_rx_mux *mode)
-
-    ctypedef uint64_t bladerf_timestamp
 
     cdef struct bladerf_quick_tune:
         uint8_t freqsel
@@ -299,13 +304,11 @@ cdef extern from "libbladeRF.h" nogil:
         uint8_t port
         uint8_t spdt
 
-    int bladerf_schedule_retune(bladerf *dev, bladerf_channel ch, bladerf_timestamp timestamp, bladerf_frequency frequency, bladerf_quick_tune *quick_tune)
+    int bladerf_schedule_retune(bladerf *dev, int ch, uint64_t timestamp, uint64_t frequency, bladerf_quick_tune *quick_tune)
 
-    int bladerf_cancel_scheduled_retunes(bladerf *dev, bladerf_channel ch)
+    int bladerf_cancel_scheduled_retunes(bladerf *dev, int ch)
 
-    int bladerf_get_quick_tune(bladerf *dev, bladerf_channel ch, bladerf_quick_tune *quick_tune)
-
-    ctypedef int16_t bladerf_correction_value
+    int bladerf_get_quick_tune(bladerf *dev, int ch, bladerf_quick_tune *quick_tune)
 
     ctypedef enum bladerf_correction:
         BLADERF_CORR_DCOFF_I
@@ -313,9 +316,9 @@ cdef extern from "libbladeRF.h" nogil:
         BLADERF_CORR_PHASE
         BLADERF_CORR_GAIN
 
-    int bladerf_set_correction(bladerf *dev, bladerf_channel ch, bladerf_correction corr, bladerf_correction_value value)
+    int bladerf_set_correction(bladerf *dev, int ch, bladerf_correction corr, int16_t value)
 
-    int bladerf_get_correction(bladerf *dev, bladerf_channel ch, bladerf_correction corr, bladerf_correction_value *value)
+    int bladerf_get_correction(bladerf *dev, int ch, bladerf_correction corr, int16_t *value)
 
     ctypedef enum bladerf_format:
         BLADERF_FORMAT_SC16_Q11
@@ -325,7 +328,7 @@ cdef extern from "libbladeRF.h" nogil:
         BLADERF_FORMAT_SC8_Q7_META
 
     cdef struct bladerf_metadata:
-        bladerf_timestamp timestamp
+        uint64_t timestamp
         uint32_t flags
         uint32_t status
         unsigned int actual_count
@@ -335,9 +338,9 @@ cdef extern from "libbladeRF.h" nogil:
 
     int bladerf_deinterleave_stream_buffer(bladerf_channel_layout layout, bladerf_format format, unsigned int buffer_size, void *samples)
 
-    int bladerf_enable_module(bladerf *dev, bladerf_channel ch, int enable)
+    int bladerf_enable_module(bladerf *dev, int ch, bint enable)
 
-    int bladerf_get_timestamp(bladerf *dev, bladerf_direction dir, bladerf_timestamp *timestamp)
+    int bladerf_get_timestamp(bladerf *dev, bladerf_direction dir, uint64_t *timestamp)
 
     int bladerf_sync_config(bladerf *dev, bladerf_channel_layout layout, bladerf_format format, unsigned int num_buffers, unsigned int buffer_size, unsigned int num_transfers, unsigned int stream_timeout)
 
@@ -345,16 +348,13 @@ cdef extern from "libbladeRF.h" nogil:
 
     int bladerf_sync_rx(bladerf *dev, void *samples, unsigned int num_samples, bladerf_metadata *metadata, unsigned int timeout_ms)
 
-    void* BLADERF_STREAM_NO_DATA
-
-    cdef struct bladerf_stream:
-        pass
+    void *BLADERF_STREAM_NO_DATA
 
     ctypedef void *(*bladerf_stream_cb)(bladerf *dev, bladerf_stream *stream, bladerf_metadata *meta, void *samples, size_t num_samples, void *user_data)
 
     int bladerf_init_stream(bladerf_stream **stream, bladerf *dev, bladerf_stream_cb callback, void ***buffers, size_t num_buffers, bladerf_format format, size_t samples_per_buffer, size_t num_transfers, void *user_data)
 
-    int bladerf_stream(bladerf_stream *stream, bladerf_channel_layout layout)
+    int bladerf_start_stream 'bladerf_stream' (bladerf_stream *stream, bladerf_channel_layout layout)
 
     int bladerf_submit_stream_buffer(bladerf_stream *stream, void *buffer, unsigned int timeout_ms)
 
@@ -417,9 +417,9 @@ cdef extern from "libbladeRF.h" nogil:
         uint32_t length
         uint8_t *data
 
-    bladerf_image* bladerf_alloc_image(bladerf *dev, bladerf_image_type type, uint32_t address, uint32_t length)
+    bladerf_image *bladerf_alloc_image(bladerf *dev, bladerf_image_type type, uint32_t address, uint32_t length)
 
-    bladerf_image* bladerf_alloc_cal_image(bladerf *dev, bladerf_fpga_size fpga_size, uint16_t vctcxo_trim)
+    bladerf_image *bladerf_alloc_cal_image(bladerf *dev, bladerf_fpga_size fpga_size, uint16_t vctcxo_trim)
 
     void bladerf_free_image(bladerf_image *image)
 
@@ -452,9 +452,9 @@ cdef extern from "libbladeRF.h" nogil:
 
     int bladerf_get_tuning_mode(bladerf *dev, bladerf_tuning_mode *mode)
 
-    int bladerf_read_trigger(bladerf *dev, bladerf_channel ch, bladerf_trigger_signal signal, uint8_t *val)
+    int bladerf_read_trigger(bladerf *dev, int ch, bladerf_trigger_signal signal, uint8_t *val)
 
-    int bladerf_write_trigger(bladerf *dev, bladerf_channel ch, bladerf_trigger_signal signal, uint8_t val)
+    int bladerf_write_trigger(bladerf *dev, int ch, bladerf_trigger_signal signal, uint8_t val)
 
     int bladerf_wishbone_master_read(bladerf *dev, uint32_t addr, uint32_t *data)
 
@@ -482,29 +482,48 @@ cdef extern from "libbladeRF.h" nogil:
 
     int bladerf_write_otp(bladerf *dev, uint8_t *buf)
 
-    int bladerf_set_rf_port(bladerf *dev, bladerf_channel ch, const char *port)
+    int bladerf_set_rf_port(bladerf *dev, int ch, const char *port)
 
-    int bladerf_get_rf_port(bladerf *dev, bladerf_channel ch, const char **port)
+    int bladerf_get_rf_port(bladerf *dev, int ch, const char **port)
 
-    int bladerf_get_rf_ports(bladerf *dev, bladerf_channel ch, const char **ports, unsigned int count)
+    int bladerf_get_rf_ports(bladerf *dev, int ch, const char **ports, unsigned int count)
 
     ctypedef enum bladerf_feature:
         BLADERF_FEATURE_DEFAULT
         BLADERF_FEATURE_OVERSAMPLE
 
-    int bladerf_enable_feature(bladerf *dev, bladerf_feature feature, int enable)
+    int bladerf_enable_feature(bladerf *dev, bladerf_feature feature, bint enable)
 
-    int bladerf_get_feature(bladerf *dev, bladerf_feature* feature)
+    int bladerf_get_feature(bladerf *dev, bladerf_feature *feature)
 
-    ctypedef enum bladerf_xb:
-        BLADERF_XB_NONE
-        BLADERF_XB_100
-        BLADERF_XB_200
-        BLADERF_XB_300
+    cdef struct bladerf_gain_cal_entry:
+        uint64_t freq
+        double gain_corr
+    
+    ctypedef enum gain_cal_state:
+        BLADERF_GAIN_CAL_UNINITIALIZED,
+        BLADERF_GAIN_CAL_LOADED,
+        BLADERF_GAIN_CAL_UNLOADED
 
-    int bladerf_expansion_attach(bladerf *dev, bladerf_xb xb)
+    cdef struct bladerf_gain_cal_tbl:
+        int ch
+        bint enabled
+        uint32_t n_entries
+        uint64_t start_freq
+        uint64_t stop_freq
+        bladerf_gain_cal_entry *entries
+        int gain_target
+        size_t file_path_len
+        char *filepath
+        gain_cal_state state
 
-    int bladerf_expansion_get_attached(bladerf *dev, bladerf_xb *xb)
+    int bladerf_load_gain_calibration(bladerf *dev, int ch, char *cal_file_loc)
+
+    int bladerf_enable_gain_calibration(bladerf *dev, int ch, bint en)
+
+    int bladerf_get_gain_calibration(bladerf *dev, int ch, bladerf_gain_cal_tbl *tbl)
+
+    int bladerf_get_gain_target(bladerf *dev, int ch, int *gain_target)
 
     ctypedef enum bladerf_log_level:
         BLADERF_LOG_LEVEL_VERBOSE
@@ -517,14 +536,14 @@ cdef extern from "libbladeRF.h" nogil:
 
     void bladerf_log_set_verbosity(bladerf_log_level level)
 
-    void bladerf_library_version 'bladerf_version' (bladerf_version* version)
+    void bladerf_library_version 'bladerf_version' (bladerf_version *version)
 
-    const char* bladerf_strerror(int error)
+    const char *bladerf_strerror(int error)
 
 cdef extern from 'Bladerf2.h' nogil:
-    int bladerf_get_bias_tee(bladerf *dev, bladerf_channel ch, int *enable)
+    int bladerf_get_bias_tee(bladerf *dev, int ch, bint *enable)
 
-    int bladerf_set_bias_tee(bladerf *dev, bladerf_channel ch, int enable)
+    int bladerf_set_bias_tee(bladerf *dev, int ch, bint enable)
 
     int bladerf_get_rfic_register(bladerf *dev, uint16_t address, uint8_t *val)
 
@@ -532,7 +551,7 @@ cdef extern from 'Bladerf2.h' nogil:
 
     int bladerf_get_rfic_temperature(bladerf *dev, float *val)
 
-    int bladerf_get_rfic_rssi(bladerf *dev, bladerf_channel ch, int32_t *pre_rssi, int32_t *sym_rssi)
+    int bladerf_get_rfic_rssi(bladerf *dev, int ch, int32_t *pre_rssi, int32_t *sym_rssi)
 
     int bladerf_get_rfic_ctrl_out(bladerf *dev, uint8_t *ctrl_out)
 
@@ -558,11 +577,11 @@ cdef extern from 'Bladerf2.h' nogil:
 
     int bladerf_set_rfic_tx_fir(bladerf *dev, bladerf_rfic_txfir txfir)
 
-    int bladerf_get_pll_lock_state(bladerf *dev, int *locked)
+    int bladerf_get_pll_lock_state(bladerf *dev, bint *locked)
 
-    int bladerf_get_pll_enable(bladerf *dev, int *enabled)
+    int bladerf_get_pll_enable(bladerf *dev, bint *enabled)
 
-    int bladerf_set_pll_enable(bladerf *dev, int enable)
+    int bladerf_set_pll_enable(bladerf *dev, bint enable)
 
     int bladerf_get_pll_refclk_range(bladerf *dev, const bladerf_range **range)
 
