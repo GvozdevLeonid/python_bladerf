@@ -188,7 +188,7 @@ cdef void process_data(object device):
 
 cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int = None,
                            gain: int = 20, bin_width: int = 100_000, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
-                           sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, device_identifier: str = None,
+                           sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, serial_number: str = None,
                            binary_output: bool = False, one_shot: bool = False, num_sweeps: int = None,
                            filename: str = None, queue: object = None,
                            print_to_console: bool = True,
@@ -199,7 +199,10 @@ cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_0
 
     channel = pybladerf.PYBLADERF_CHANNEL_RX(channel)
 
-    device = pybladerf.pybladerf_open(device_identifier)
+    if serial_number is None:
+        device = pybladerf.pybladerf_open()
+    else:
+        device = pybladerf.pybladerf_open_by_serial(serial_number)
     run_available[device.serialno] = True
 
     if oversample:

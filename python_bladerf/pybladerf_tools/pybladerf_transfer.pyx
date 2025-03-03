@@ -237,7 +237,7 @@ cpdef void tx_process(object device):
 
 cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int = None,
                               gain: int = 0, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
-                              repeat_tx: bool = False, synchronize: bool = False, num_samples: int = None, device_identifier: str = None,
+                              repeat_tx: bool = False, synchronize: bool = False, num_samples: int = None, serial_number: str = None,
                               rx_filename: str = None, tx_filename: str = None, rx_buffer: object = None, tx_buffer: object = None,
                               print_to_console: bool = True):
 
@@ -245,7 +245,11 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
 
     init_signals()
 
-    device = pybladerf.pybladerf_open(device_identifier)
+    if serial_number is None:
+        device = pybladerf.pybladerf_open()
+    else:
+        device = pybladerf.pybladerf_open_by_serial(serial_number)
+
     run_available[device.serialno] = True
 
     if oversample:
