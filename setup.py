@@ -5,6 +5,7 @@ from os import environ, getenv
 import numpy
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
+from Cython.Build import cythonize
 
 libraries = ['bladeRF']
 
@@ -51,13 +52,19 @@ if PLATFORM != 'android':
     environ['CFLAGS'] = f'{cflags} {new_cflags}'.strip()
     environ['LDFLAGS'] = f'{ldflags} {new_ldflags}'.strip()
 
-else:
-    LIBHACKRF_FILES = ['python_bladerf/pylibbladerf/pybladerf_android.pyx', 'python_bladerf/pylibbladerf/cbladerf_android.pxd']
 
+class CustomBuildExt(build_ext):
+    def run(self):
+        compile_env = {'ANDROID': PLATFORM == 'android'}
+        self.distribution.ext_modules = cythonize(
+            self.distribution.ext_modules,
+            compile_time_env=compile_env,
+        )
+        super().run()
 
 setup(
     name='python_bladerf',
-    cmdclass={'build_ext': build_ext},
+    cmdclass={'build_ext': CustomBuildExt},
     install_requires=INSTALL_REQUIRES,
     setup_requires=SETUP_REQUIRES,
     ext_modules=[
