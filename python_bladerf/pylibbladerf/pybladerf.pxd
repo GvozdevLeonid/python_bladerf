@@ -98,10 +98,6 @@ cdef class pybladerf_stream:
     cdef cbladerf.bladerf_stream **get_double_ptr(self)
 
 # ---- WRAPPER ---- #
-cdef class PyBladeRFDeviceList:
-    cdef cbladerf.bladerf_devinfo *__bladerf_device_list
-    cdef int _device_count
-
 cdef class PyBladerfDevice:
     cdef cbladerf.bladerf *__bladerf_device
     cdef public str serialno
