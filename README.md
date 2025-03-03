@@ -34,7 +34,7 @@ The library supports all bladerf2 functions, some of the functions can also work
 
 ## usage
 ```
-usage: python_bladerf [-h] {info, sweep} ...
+usage: python_bladerf [-h] {info, sweep, transfer} ...
 
 python_bladerf is a Python wrapper for libbladerf. It also contains some additional tools.
 
@@ -53,15 +53,14 @@ usage: python_bladerf info [-h] [-f] [-s]
 options:
   -h, --help            show this help message and exit
   -f, --full            show full info
-  -i, --device_identifiers
-                        show only founded device_identifiers
+  -s, --serial_numbers  show only founded serial_numbers
 ```
 ```
 usage: python_bladerf sweep [-h] [-d] [-f] [-g] [-w] [-c] [-1] [-N] [-o] [-B] [-S] [-s] [-b] [-r]
 
 options:
   -h, --help  show this help message and exit
-  -d          device identifier of desired BladeRF
+  -d          serial number of desired BladeRF
   -f          freq_min:freq_max. minimum and maximum frequencies in MHz start:stop or start1:stop1,start2:stop2. Default
   -g          RX gain, -15 - 60dB, 1dB steps
   -w          FFT bin width (frequency resolution) in Hz
@@ -79,7 +78,7 @@ options:
 python_bladerf transfer [-h] [-d] [-r] [-t] [-f] [-p] [-c] [-g] [-N] [-R] [-s] -[b] [-H] -[o]
 
 options:
-  -d                  serial number of desired HackRF
+  -d                  serial number of desired BladeRF
   -r                  <filename> receive data into file (use "-" for stdout)
   -t                  <filename> transmit data from file (use "-" for stdout)
   -f, --freq_hz       frequency in Hz (0MHz to 6000MHz supported). Default is 900MHz
@@ -113,10 +112,16 @@ pythonforandroidrecipes/
         __init__.py
     libbladerf/
         __init__.py
+        bladerf_android.patch
+        pre_install.cmake
         jni/
             Android.mk
             Application.mk
             libbladerf.mk
+            libad936x.mk
+        src/
+            libusb.c
+            log.c
 ```
 
 ## Examples
