@@ -1,0 +1,11 @@
+diff -ruN bladeRF-master/host/libraries/libbladeRF/src/streaming/sync_worker.c patched/host/libraries/libbladeRF/src/streaming/sync_worker.c
+--- bladeRF-master/host/libraries/libbladeRF/src/streaming/sync_worker.c	2024-08-13 21:56:15
++++ patched/host/libraries/libbladeRF/src/streaming/sync_worker.c	2025-02-26 01:57:03
+@@ -40,6 +40,7 @@
+ #include "backend/usb/usb.h"
+ 
+ #define worker2str(s) (direction2str(s->stream_config.layout & BLADERF_DIRECTION_MASK))
++#define pthread_cancel(thread) do {} while (0)
+ 
+ void *sync_worker_task(void *arg);
+ 

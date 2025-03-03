@@ -11,14 +11,13 @@ from pythonforandroid.util import current_directory
 class LibbladerfRecipe(NDKRecipe):
 
     # url = 'https://github.com/Nuand/bladeRF/archive/refs/tags/{version}.tar.gz'
-    url = 'https://github.com/Nuand/bladeRF/archive/refs/heads/master.zip'
-    # patches = ('hackrf_android.patch', )
+    url = 'git+https://github.com/Nuand/bladeRF.git'
+    patches = ('bladerf_android.patch', )
     generated_libraries = ('libbladerf.so', )
     site_packages_name = 'libbladerf'
-    version = '2023.02'
-    library_version_major = 2
-    library_version_minor = 5
-    library_version_patch = 1
+    library_version_major = '2'
+    library_version_minor = '5'
+    library_version_patch = '1'
 
     depends = ('libusb', )
     name = 'libbladerf'
@@ -38,9 +37,27 @@ class LibbladerfRecipe(NDKRecipe):
 
             shutil.copy(os.path.join(self.get_recipe_dir(), 'jni', 'Application.mk'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni'))
             shutil.copy(os.path.join(self.get_recipe_dir(), 'jni', 'libbladerf.mk'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni'))
+            shutil.copy(os.path.join(self.get_recipe_dir(), 'jni', 'libad936x.mk'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni'))
             shutil.copy(os.path.join(self.get_recipe_dir(), 'jni', 'Android.mk'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni'))
 
+            shutil.copy(os.path.join(self.get_recipe_dir(), 'src', 'libusb.c'), os.path.join(self.get_build_dir(arch.arch), 'host', 'libraries', 'libbladeRF', 'src', 'backend', 'usb'))
+            shutil.copy(os.path.join(self.get_recipe_dir(), 'src', 'log.c'), os.path.join(self.get_build_dir(arch.arch), 'host', 'common', 'src'))
+
             shutil.copy(os.path.join(libusb_recipe.get_build_dir(arch), 'libusb', 'libusb.h'), os.path.join(self.get_build_dir(arch.arch), 'android', 'libusb'))
+
+            shprint(
+                sh.Command('cmake'),
+                '-DLIBBLADERF_VERSION_MAJOR=' + str(self.library_version_major),
+                '-DLIBBLADERF_VERSION_MINOR=' + str(self.library_version_minor),
+                '-DLIBBLADERF_VERSION_PATCH=' + str(self.library_version_patch),
+                '-DLIBBLADERF_VERSION=' + f'{self.library_version_major}.{self.library_version_minor}.{self.library_version_patch}-git',
+                '-DLIBBLADERF_HOST_CONFIG_FILE_DIR=' + os.path.join(self.get_build_dir(arch.arch), 'host', 'common', 'include'),
+                '-DLIBBLADERF_VERSION_FILE_DIR=' + os.path.join(self.get_build_dir(arch.arch), 'host', 'libraries', 'libbladeRF', 'src'),
+                '-DLIBBLADERF_BACKEND_CONFIG_DIR=' + os.path.join(self.get_build_dir(arch.arch), 'host', 'libraries', 'libbladeRF', 'src', 'backend'),
+                '-DLIBBLADERF_ROOT_DIR=' + self.get_build_dir(arch.arch),
+                '-P',
+                os.path.join(self.get_recipe_dir(),'pre_install.cmake'),
+            )
 
     def get_recipe_env(self, arch: Arch) -> dict:
         env = super().get_recipe_env(arch)
@@ -60,13 +77,11 @@ class LibbladerfRecipe(NDKRecipe):
         shutil.copyfile(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libusb1.0.so'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni', 'libusb1.0.so'))
 
         with current_directory(self.get_build_dir(arch.arch)):
+
             shprint(
                 sh.Command(os.path.join(self.ctx.ndk_dir, 'ndk-build')),
                 'NDK_PROJECT_PATH=' + self.get_build_dir(arch.arch) + '/android',
                 'APP_PLATFORM=android-' + str(self.ctx.ndk_api),
-                'LIBBLADERF_VERSION_MAJOR=' + self.library_version_major,
-                'LIBBLADERF_VERSION_MINOR=' + self.library_version_minor,
-                'LIBBLADERF_VERSION_PATCH=' + self.library_version_patch,
                 'NDK=' + self.ctx.ndk_dir,
                 'APP_ABI=' + arch.arch,
                 *extra_args,

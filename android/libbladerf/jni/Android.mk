@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+GLOBAL_LOCAL_PATH := $(call my-dir)
 
-LOCAL_PATH := $(call my-dir)
-
-include $(LOCAL_PATH)/libbladerf.mk
+include $(GLOBAL_LOCAL_PATH)/libad936x.mk
+include $(GLOBAL_LOCAL_PATH)/libbladerf.mk
