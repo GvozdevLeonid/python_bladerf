@@ -1185,7 +1185,10 @@ class PyBladeRFDeviceList:
 
     @property
     def instances(self) -> list[int]:
-        '''List of instances or ID's of found devices'''
+        '''
+        List of instances or ID's of found devices.
+        On Android list of file descriptors of found devices.
+        '''
         ...
 
     @property
@@ -1197,6 +1200,7 @@ class PyBladeRFDeviceList:
     def products(self) -> list[str]:
         '''List of product description string of found devices'''
         ...
+
 
 class PyBladerfDevice:
     '''
@@ -1975,32 +1979,15 @@ class PyBladerfDevice:
         '''
         ...
 
-def pybladerf_open(device_identifier: str = '') -> PyBladerfDevice:
-    '''
-    Open specified device using a device identifier string. See pybladerf_open_with_devinfo() if a device identifier string is not readily available.
-
-    The general form of the device identifier string is:
-        `<backend>:[device=<bus>:<addr>] [instance=<n>] [serial=<serial>]`
-
-    An empty ("") device identifier will result in the first encountered device being opened (using the first discovered backend)
-
-    The 'backend' describes the mechanism used to communicate with the device, and may be one of the following:
-        - *: Any available backend
-        - libusb:  libusb (See libusb changelog notes for required version, given your OS and controller)
-        - cypress: Cypress CyUSB/CyAPI backend (Windows only)
-
-    If no arguments are provided after the backend, the first encountered device on the specified backend will be opened. Note that a backend is required, if any arguments are to be provided.
-
-    Next, any provided arguments are provide as used to find the desired device. Be sure not to over constrain the search. Generally, only one of the above is required -- providing all of these may over constrain the search for the desired device (e.g., if a serial number matches, but not on the specified bus and address.)
-    - device=<bus>:<addr> (Specifies USB bus and address. Decimal or hex prefixed by '0x' is permitted)
-    - instance=<n> (Nth instance encountered, 0-indexed)
-    - serial=<serial> (Device's serial number)
-
-    Below is an example of how to open a device with a specific serial number, using any avaiable backend supported by libbladeRF:
-    '''
+def pybladerf_open() -> PyBladerfDevice | None:
+    '''Open first available bladeRF device'''
     ...
 
-def pybladerf_open_with_devinfo(devinfo: pybladerf_devinfo) -> PyBladerfDevice:
+def pybladerf_open_by_serial(desired_serial_number: str) -> PyBladerfDevice | None:
+    '''Open bladeRF device by serial number'''
+    ...
+
+def pybladerf_open_with_devinfo(devinfo: pybladerf_devinfo) -> PyBladerfDevice | None:
     '''
     Opens device specified by provided pybladerf_devinfo structure
 
