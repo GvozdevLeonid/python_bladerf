@@ -18,16 +18,16 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest='command', title='Available commands')
     subparsers.required = True
     pybladerf_info_parser = subparsers.add_parser(
-        'info', help='Read device information from Bladerf such as serial number and FPGA version.', usage="python_bladerf info [-h] [-f] [-i]",
+        'info', help='Read device information from Bladerf such as serial number and FPGA version.', usage="python_bladerf info [-h] [-f] [-s]",
     )
     pybladerf_info_parser.add_argument('-f', '--full', action='store_true', help='show full info')
-    pybladerf_info_parser.add_argument('-i', '--device_identifiers', action='store_true', help='show only founded device_identifiers')
+    pybladerf_info_parser.add_argument('-s', '--serial_numbers', action='store_true', help='show only founded serial_numbers')
 
     pybladerf_sweep_parser = subparsers.add_parser(
         'sweep', help='a command-line spectrum analyzer.', usage='python_bladerf sweep [-h] [-d] [-f] [-g] [-w] [-c] [-1] [-N] [-o] [-p] [-B] [-S] [-s] [-b] [-r]',
     )
 
-    pybladerf_sweep_parser.add_argument('-d', action='store', help='device identifier of desired BladeRF', metavar='', default='')
+    pybladerf_sweep_parser.add_argument('-s', action='store', help='serial number of desired BladeRF', metavar='', default='')
     pybladerf_sweep_parser.add_argument('-f', action='store', help='freq_min:freq_max. minimum and maximum frequencies in MHz start:stop or start1:stop1,start2:stop2', metavar='', default='70:6000')
     pybladerf_sweep_parser.add_argument('-g', action='store', help='RX gain, -15 - 60dB, 1dB steps', metavar='', default=20)
     pybladerf_sweep_parser.add_argument('-w', action='store', help='FFT bin width (frequency resolution) in Hz', metavar='', default=1000000)
@@ -46,7 +46,7 @@ def main() -> None:
     pybladerf_transfer_parser = subparsers.add_parser(
         'transfer', help='Send and receive signals using BladeRF. Input/output files consist of complex64 quadrature samples.', usage='python_bladerf transfer [-h] [-d] [-r] [-t] [-f] [-p] [-c] [-g] [-N] [-R] [-s] -[b] [-H] -[o]',
     )
-    pybladerf_transfer_parser.add_argument('-d', action='store', help='device identifier of desired BladeRF', metavar='')
+    pybladerf_transfer_parser.add_argument('-s', action='store', help='serial number of desired BladeRF', metavar='')
     pybladerf_transfer_parser.add_argument('-r', action='store', help='<filename> receive data into file (use "-" for stdout)', metavar='')
     pybladerf_transfer_parser.add_argument('-t', action='store', help='<filename> transmit data from file (use "-" for stdin)', metavar='')
     pybladerf_transfer_parser.add_argument('-f', '--freq_hz', action='store', help='frequency in Hz (0MHz to 6000MHz supported). Default is 900MHz', metavar='', default=900_000_000)
@@ -91,7 +91,7 @@ def main() -> None:
                                         oversample=args.o,
                                         antenna_enable=args.p,
                                         sweep_style=pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_LINEAR if args.s == 'L' else (pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED if args.s == 'I' else -1),
-                                        device_identifier=args.d,
+                                        serial_number=args.d,
                                         binary_output=args.B,
                                         one_shot=args.__dict__.get('1'),
                                         num_sweeps=int(args.N) if args.N is not None else None,
@@ -110,7 +110,7 @@ def main() -> None:
             repeat_tx=args.R,
             synchronize=args.H,
             num_samples=int(args.N) if args.N is not None else None,
-            device_identifier=args.d,
+            serial_number=args.d,
             rx_filename=args.r,
             tx_filename=args.t,
             print_to_console=True,
