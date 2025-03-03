@@ -31,7 +31,7 @@ def pybladerf_info(print_to_console: bool = True) -> str | None:
     print_info += f'libbladeRF version: {pybladerf.pybladerf_library_version()}\n'
     if device_list.device_count > 0:
         for i in range(device_list.device_count):
-            device = pybladerf.pybladerf_open(device_list.devstrs[i])
+            device = pybladerf.pybladerf_open_by_serial(device_list.serial_numbers[i])
             print_info += 'Found BladeRF:\n'
             print_info += f'Board: {device.pybladerf_get_board_name()} ({device.pybladerf_get_fpga_size()})\n'
             print_info += f'Instance: {device_list.instances[i]}\n'
@@ -41,6 +41,8 @@ def pybladerf_info(print_to_console: bool = True) -> str | None:
             print_info += f'USB Speed: {device.pybladerf_device_speed()}\n'
             print_info += f'FPGA Version: {device.pybladerf_fpga_version()}\n'
             print_info += f'VCTCXO DAC calibration: {hex(device.pybladerf_get_vctcxo_trim())}\n'
+
+            device.pybladerf_close()
     else:
         print_info += 'No BladeRF boards found.'
 
@@ -51,11 +53,11 @@ def pybladerf_info(print_to_console: bool = True) -> str | None:
     return print_info
 
 
-def pybladerf_device_identifiers_list_info(print_to_console: bool = True) -> tuple[int, list] | None:
+def pybladerf_serial_numbers_list_info(print_to_console: bool = True) -> tuple[int, list] | None:
     device_list = pybladerf.PyBladeRFDeviceList()
 
     if print_to_console:
-        print(f'Device identifiers [{device_list.device_count}]: {device_list.devstrs}')
+        print(f'Serial numbers [{device_list.device_count}]: {device_list.serial_numbers}')
         return None
 
-    return device_list.device_count, device_list.devstrs
+    return device_list.device_count, device_list.serial_numbers
