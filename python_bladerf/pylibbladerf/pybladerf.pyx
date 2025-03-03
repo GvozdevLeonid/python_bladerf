@@ -23,14 +23,18 @@
 # cython: language_level=3str
 from python_bladerf import __version__
 from libc.stdint cimport uint8_t, int16_t, uint16_t, int32_t, uint32_t, uint64_t, uintptr_t
+from libc.string cimport memcpy, memset, strncpy
 from cpython cimport Py_INCREF, Py_DECREF
 from libc.stdlib cimport malloc, free
-from libc.string cimport memcpy
 from enum import IntEnum
 from ctypes import c_int
 from . cimport cbladerf
 import numpy as np
 cimport cython
+
+IF ANDROID:
+    from .__android import get_bladerf_device_list
+
 
 cdef dict global_callbacks = {}
 
@@ -408,15 +412,18 @@ class pybladerf_sweep_style(IntEnum):
 cdef class pybladerf_devinfo:
 
     def __init__(self,
-                 backend: pybladerf_backend = None,
-                 serial: str = None,
-                 usb_bus: int = None,
-                 usb_addr: int = None,
-                 instance: int = None,
+                 backend: pybladerf_backend = pybladerf_backend.PYBLADERF_BACKEND_ANY,
+                 serial: str = 'ANY',
+                 usb_bus: int = 255,
+                 usb_addr: int = 255,
+                 instance: int = 4294967295,
                  manufacturer: str = None,
                  product: str = None) -> None:
 
         self.__bladerf_devinfo = <cbladerf.bladerf_devinfo*> malloc(sizeof(cbladerf.bladerf_devinfo))
+        memset(self.__bladerf_devinfo.serial, 0, cbladerf.BLADERF_SERIAL_LENGTH)
+        memset(self.__bladerf_devinfo.product, 0, cbladerf.BLADERF_DESCRIPTION_LENGTH)
+        memset(self.__bladerf_devinfo.manufacturer, 0, cbladerf.BLADERF_DESCRIPTION_LENGTH)
 
         self.backend = backend
         self.serial = serial
@@ -450,7 +457,7 @@ cdef class pybladerf_devinfo:
 
         def __set__(self, value: str) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
-                self.__bladerf_devinfo[0].serial = value.encode('utf-8')
+                strncpy(self.__bladerf_devinfo[0].serial, value.encode('utf-8'), cbladerf.BLADERF_SERIAL_LENGTH - 1)
 
     property usb_bus:
         def __get__(self) -> int:
@@ -486,7 +493,7 @@ cdef class pybladerf_devinfo:
 
         def __set__(self, value: str) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
-                self.__bladerf_devinfo[0].manufacturer = value.encode('utf-8')
+                strncpy(self.__bladerf_devinfo[0].manufacturer, value.encode('utf-8'), cbladerf.BLADERF_DESCRIPTION_LENGTH - 1)
 
     property product:
         def __get__(self) -> str:
@@ -495,7 +502,7 @@ cdef class pybladerf_devinfo:
 
         def __set__(self, value: str) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
-                self.__bladerf_devinfo[0].product = value.encode('utf-8')
+                strncpy(self.__bladerf_devinfo[0].product, value.encode('utf-8'), cbladerf.BLADERF_DESCRIPTION_LENGTH - 1)
 
     cdef cbladerf.bladerf_devinfo *get_ptr(self):
         return self.__bladerf_devinfo
@@ -1019,52 +1026,97 @@ cdef class pybladerf_stream:
         return &self.__bladerf_stream
 
 # ---- WRAPPER ---- #
-cdef class PyBladeRFDeviceList:
+IF ANDROID:
+    cdef class PyBladeRFDeviceList:
+        cdef list __bladerf_device_list
 
-    def __cinit__(self):
-        self._device_count = cbladerf.bladerf_get_device_list(&self.__bladerf_device_list)
+        def __cinit__(self):
+            self.__bladerf_device_list = get_bladerf_device_list()
 
-    def __dealloc__(self):
-        if self.__bladerf_device_list != NULL:
-            cbladerf.bladerf_free_device_list(self.__bladerf_device_list)
+        property device_count:
+            def __get__(self):
+                return len(self.__bladerf_device_list)
 
-    property device_count:
-        def __get__(self) -> int:
+        property devstrs:
+            def __get__(self) -> list[str]:
+                return [f'libusb:instance={self.__bladerf_device_list[i][0]} serial={self.__bladerf_device_list[i][1]}' for i in range(self.device_count)]
+
+        property backends:
+            def __get__(self) -> list[pybladerf_backend]:
+                return ['libusb' for i in range(self.device_count)]
+
+        property serial_numbers:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i][1] for i in range(self.device_count)]
+
+        property usb_buses:
+            def __get__(self) -> list[int]:
+                return [255 for i in range(self.device_count)]
+
+        property usb_addresses:
+            def __get__(self) -> list[int]:
+                return [255 for i in range(self.device_count)]
+
+        property instances:
+            def __get__(self) -> list[int]:
+                return [self.__bladerf_device_list[i][0] for i in range(self.device_count)]
+
+        property manufacturers:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i][2] for i in range(self.device_count)]
+
+        property products:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i][3] for i in range(self.device_count)]
+ELSE:
+    cdef class PyBladeRFDeviceList:
+        cdef cbladerf.bladerf_devinfo *__bladerf_device_list
+        cdef int _device_count
+
+        def __cinit__(self):
+            self._device_count = cbladerf.bladerf_get_device_list(&self.__bladerf_device_list)
+
+        def __dealloc__(self):
             if self.__bladerf_device_list != NULL:
-                return self._device_count
-            return 0
+                cbladerf.bladerf_free_device_list(self.__bladerf_device_list)
 
-    property devstrs:
-        def __get__(self) -> list[str]:
-            return [f'{cbladerf.bladerf_backend_str(self.__bladerf_device_list[i].backend).decode("utf-8")}:device={self.__bladerf_device_list[i].usb_bus}:{self.__bladerf_device_list[i].usb_addr} instance={self.__bladerf_device_list[i].instance} serial={self.__bladerf_device_list[i].serial.decode("utf-8")}' for i in range(self.device_count)]
+        property device_count:
+            def __get__(self) -> int:
+                if self.__bladerf_device_list != NULL:
+                    return self._device_count
+                return 0
 
-    property backends:
-        def __get__(self) -> list[pybladerf_backend]:
-            return [pybladerf_backend(self.__bladerf_device_list[i].backend) for i in range(self.device_count)]
+        property devstrs:
+            def __get__(self) -> list[str]:
+                return [f'{cbladerf.bladerf_backend_str(self.__bladerf_device_list[i].backend).decode("utf-8")}:device={self.__bladerf_device_list[i].usb_bus}:{self.__bladerf_device_list[i].usb_addr} instance={self.__bladerf_device_list[i].instance} serial={self.__bladerf_device_list[i].serial.decode("utf-8")}' for i in range(self.device_count)]
 
-    property serial_numbers:
-        def __get__(self) -> list[str]:
-            return [self.__bladerf_device_list[i].serial.decode('utf-8') for i in range(self.device_count)]
+        property backends:
+            def __get__(self) -> list[pybladerf_backend]:
+                return [pybladerf_backend(self.__bladerf_device_list[i].backend) for i in range(self.device_count)]
 
-    property usb_buses:
-        def __get__(self) -> list[int]:
-            return [self.__bladerf_device_list[i].usb_bus for i in range(self.device_count)]
+        property serial_numbers:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i].serial.decode('utf-8') for i in range(self.device_count)]
 
-    property usb_addresses:
-        def __get__(self) -> list[int]:
-            return [self.__bladerf_device_list[i].usb_addr for i in range(self.device_count)]
+        property usb_buses:
+            def __get__(self) -> list[int]:
+                return [self.__bladerf_device_list[i].usb_bus for i in range(self.device_count)]
 
-    property instances:
-        def __get__(self) -> list[int]:
-            return [self.__bladerf_device_list[i].instance for i in range(self.device_count)]
+        property usb_addresses:
+            def __get__(self) -> list[int]:
+                return [self.__bladerf_device_list[i].usb_addr for i in range(self.device_count)]
 
-    property manufacturers:
-        def __get__(self) -> list[str]:
-            return [self.__bladerf_device_list[i].manufacturer.decode('utf-8') for i in range(self.device_count)]
+        property instances:
+            def __get__(self) -> list[int]:
+                return [self.__bladerf_device_list[i].instance for i in range(self.device_count)]
 
-    property products:
-        def __get__(self) -> list[str]:
-            return [self.__bladerf_device_list[i].product.decode('utf-8') for i in range(self.device_count)]
+        property manufacturers:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i].manufacturer.decode('utf-8') for i in range(self.device_count)]
+
+        property products:
+            def __get__(self) -> list[str]:
+                return [self.__bladerf_device_list[i].product.decode('utf-8') for i in range(self.device_count)]
 
 cdef struct pybladerf_async_data:
     pass
@@ -1990,22 +2042,61 @@ cdef class PyBladerfDevice:
 
         raise RuntimeError(f'set_tx_complete_callback() failed: Device not initialized!')
 
-def pybladerf_open(device_identifier: str = '') -> PyBladerfDevice:
-    if device_identifier is None:
-        device_identifier = ''
-
+def pybladerf_open() -> PyBladerfDevice | None:
     cdef PyBladerfDevice pybladerf_device = PyBladerfDevice()
-    result = cbladerf.bladerf_open(pybladerf_device.get_double_ptr(), device_identifier.encode('utf-8'))
+
+    IF ANDROID:
+        result = -7
+        bladerf_device_list = get_bladerf_device_list(1)
+        if len(bladerf_device_list):
+            devinfo = pybladerf_devinfo(backend=pybladerf_backend.PYBLADERF_BACKEND_LIBUSB, instance=bladerf_device_list[0][0])
+            result = cbladerf.bladerf_open_with_devinfo(pybladerf_device.get_double_ptr(), devinfo.get_ptr())
+    ELSE:
+        result = cbladerf.bladerf_open(pybladerf_device.get_double_ptr(), NULL)
+
     raise_error('pybladerf_open()', result)
     pybladerf_device._setup_device()
     return pybladerf_device
 
-def pybladerf_open_with_devinfo(devinfo: pybladerf_devinfo) -> PyBladerfDevice:
+def pybladerf_open_by_serial(desired_serial_number: str) -> PyBladerfDevice | None:
+    if desired_serial_number in (None, ''):
+        return pybladerf_open()
+
     cdef PyBladerfDevice pybladerf_device = PyBladerfDevice()
-    result = cbladerf.bladerf_open_with_devinfo(pybladerf_device.get_double_ptr(), devinfo.get_ptr())
-    raise_error('pybladerf_open_with_devinfo()', result)
+    IF ANDROID:
+        result = -7
+        bladerf_device_list = get_bladerf_device_list(1)
+        if len(bladerf_device_list):
+            for file_descriptor, serial_number, manufacturer, product in bladerf_device_list:
+                if serial_number == desired_serial_number:
+                    devinfo = pybladerf_devinfo(backend=pybladerf_backend.PYBLADERF_BACKEND_LIBUSB, instance=file_descriptor)
+                    result = cbladerf.bladerf_open_with_devinfo(pybladerf_device.get_double_ptr(), devinfo.get_ptr())
+    ELSE:
+        device_identifier = f'*:serial={desired_serial_number}'
+        result = cbladerf.bladerf_open(pybladerf_device.get_double_ptr(), device_identifier.encode('utf-8'))
+
+    raise_error('pybladerf_open_by_serial()', result)
     pybladerf_device._setup_device()
     return pybladerf_device
+
+def pybladerf_open_with_devinfo(devinfo: pybladerf_devinfo) -> PyBladerfDevice | None:
+    IF ANDROID:
+        if devinfo.serial != 'ANY':
+            devinfo.usb_addr = 255
+            devinfo.usb_bus = 255
+            devinfo.backend = pybladerf_backend.PYBLADERF_BACKEND_LIBUSB
+
+            return pybladerf_open_by_serial(devinfo.serial)
+        else:
+            return pybladerf_open()
+
+    ELSE:
+        cdef PyBladerfDevice pybladerf_device = PyBladerfDevice()
+        result = cbladerf.bladerf_open_with_devinfo(pybladerf_device.get_double_ptr(), devinfo.get_ptr())
+
+        raise_error('pybladerf_open_with_devinfo()', result)
+        pybladerf_device._setup_device()
+        return pybladerf_device
 
 def pybladerf_get_devinfo_from_str(devstr: str) -> pybladerf_devinfo:
     cdef pybladerf_devinfo info = pybladerf_devinfo()
