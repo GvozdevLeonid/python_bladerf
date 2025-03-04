@@ -27,7 +27,7 @@ def main() -> None:
         'sweep', help='a command-line spectrum analyzer.', usage='python_bladerf sweep [-h] [-d] [-f] [-g] [-w] [-c] [-1] [-N] [-o] [-p] [-B] [-S] [-s] [-b] [-r]',
     )
 
-    pybladerf_sweep_parser.add_argument('-s', action='store', help='serial number of desired BladeRF', metavar='', default='')
+    pybladerf_sweep_parser.add_argument('-d', action='store', help='serial number of desired BladeRF', metavar='', default='')
     pybladerf_sweep_parser.add_argument('-f', action='store', help='freq_min:freq_max. minimum and maximum frequencies in MHz start:stop or start1:stop1,start2:stop2', metavar='', default='70:6000')
     pybladerf_sweep_parser.add_argument('-g', action='store', help='RX gain, -15 - 60dB, 1dB steps', metavar='', default=20)
     pybladerf_sweep_parser.add_argument('-w', action='store', help='FFT bin width (frequency resolution) in Hz', metavar='', default=1000000)
@@ -42,11 +42,10 @@ def main() -> None:
     pybladerf_sweep_parser.add_argument('-b', action='store', help='baseband filter bandwidth in MHz (0.2 MHz - 56 MHz). Default .75 * sample rate', metavar='')
     pybladerf_sweep_parser.add_argument('-r', action='store', help='<filename> output file', metavar='')
 
-
     pybladerf_transfer_parser = subparsers.add_parser(
         'transfer', help='Send and receive signals using BladeRF. Input/output files consist of complex64 quadrature samples.', usage='python_bladerf transfer [-h] [-d] [-r] [-t] [-f] [-p] [-c] [-g] [-N] [-R] [-s] -[b] [-H] -[o]',
     )
-    pybladerf_transfer_parser.add_argument('-s', action='store', help='serial number of desired BladeRF', metavar='')
+    pybladerf_transfer_parser.add_argument('-d', action='store', help='serial number of desired BladeRF', metavar='')
     pybladerf_transfer_parser.add_argument('-r', action='store', help='<filename> receive data into file (use "-" for stdout)', metavar='')
     pybladerf_transfer_parser.add_argument('-t', action='store', help='<filename> transmit data from file (use "-" for stdin)', metavar='')
     pybladerf_transfer_parser.add_argument('-f', '--freq_hz', action='store', help='frequency in Hz (0MHz to 6000MHz supported). Default is 900MHz', metavar='', default=900_000_000)
