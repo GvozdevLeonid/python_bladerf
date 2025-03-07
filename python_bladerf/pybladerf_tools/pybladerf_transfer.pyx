@@ -272,6 +272,7 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
     elif tx_buffer is not None or tx_filename is not None:
         channel = pybladerf.PYBLADERF_CHANNEL_TX(channel)
 
+    cdef uint32_t max_scale = 127 if oversample else 2047
     cdef dict current_device_data = {
         'num_samples': num_samples,
         'divider': 128 if oversample else 2048,
@@ -390,7 +391,7 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
                 if byte_count == 0 and synchronize:
                     sys.stderr.write('Waiting for trigger...\n')
                 elif byte_count != 0 and not current_device_data['tx_complete']:
-                    dB_full_scale = 10 * np.log10(stream_power / ((byte_count / 2) * 127 ** 2))
+                    dB_full_scale = 10 * np.log10(stream_power / ((byte_count / 2) * max_scale ** 2))
                     sys.stderr.write(f'{(byte_count / time_difference) / 1e6:.1f} MB/second, average power {dB_full_scale:.1f} dBfs\n')
                 elif byte_count == 0 and not synchronize and not current_device_data['tx_complete']:
                     if print_to_console:
