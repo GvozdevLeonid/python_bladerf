@@ -9,8 +9,6 @@ from Cython.Build import cythonize
 
 libraries = ['bladeRF']
 
-LIBBLADERF_FILES = ['python_bladerf/pylibbladerf/pybladerf.pyx', 'python_bladerf/pylibbladerf/cbladerf.pxd']
-
 INSTALL_REQUIRES = []
 SETUP_REQUIRES = []
 
@@ -54,13 +52,14 @@ if PLATFORM != 'android':
 
 
 class CustomBuildExt(build_ext):
-    def run(self):
+    def run(self) -> None:
         compile_env = {'ANDROID': PLATFORM == 'android'}
         self.distribution.ext_modules = cythonize(
             self.distribution.ext_modules,
             compile_time_env=compile_env,
         )
         super().run()
+
 
 setup(
     name='python_bladerf',
@@ -70,7 +69,7 @@ setup(
     ext_modules=[
         Extension(
             name='python_bladerf.pylibbladerf.pybladerf',
-            sources=LIBBLADERF_FILES,
+            sources=['python_bladerf/pylibbladerf/pybladerf.pyx', 'python_bladerf/pylibbladerf/cbladerf.pxd'],
             libraries=libraries,
             include_dirs=['python_bladerf/pylibbladerf', numpy.get_include()],
             extra_compile_args=['-w'],
