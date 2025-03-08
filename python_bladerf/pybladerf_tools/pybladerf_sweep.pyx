@@ -345,8 +345,8 @@ cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_0
     device.pybladerf_sync_config(
         layout=pybladerf.pybladerf_channel_layout.PYBLADERF_RX_X1,
         data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META,
-        num_buffers=int(os.environ.get('pybladerf_sweep_num_buffers', 2048)),
-        buffer_size=int(os.environ.get('pybladerf_sweep_buffer_size', 16384)),
+        num_buffers=int(os.environ.get('pybladerf_sweep_num_buffers', 4096)),
+        buffer_size=int(os.environ.get('pybladerf_sweep_buffer_size', 8192)),
         num_transfers=int(os.environ.get('pybladerf_sweep_num_transfers', 32)),
         stream_timeout=0,
     )
