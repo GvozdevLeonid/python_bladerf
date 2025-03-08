@@ -345,8 +345,8 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
         device.pybladerf_sync_config(
             layout=pybladerf.pybladerf_channel_layout.PYBLADERF_RX_X1,
             data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11,
-            num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 2048)),
-            buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 16384)),
+            num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 4096)),
+            buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 8192)),
             num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 32)),
             stream_timeout=0,
         )
@@ -358,8 +358,8 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
         device.pybladerf_sync_config(
             layout=pybladerf.pybladerf_channel_layout.PYBLADERF_TX_X1,
             data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11,
-            num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 2048)),
-            buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 16384)),
+            num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 4096)),
+            buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 8192)),
             num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 32)),
             stream_timeout=0,
         )
