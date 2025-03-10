@@ -203,7 +203,9 @@ cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_0
         device = pybladerf.pybladerf_open()
     else:
         device = pybladerf.pybladerf_open_by_serial(serial_number)
+
     run_available[device.serialno] = True
+    device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
 
     if oversample:
         sample_rate = int(sample_rate) if MIN_SAMPLE_RATE * 2 <= int(sample_rate) <= MAX_SAMPLE_RATE * 2 else 122_000_000
@@ -242,15 +244,6 @@ cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_0
     if frequencies is None:
         frequencies = [int(PY_FREQ_MIN_MHZ - sample_rate // 2e6), int(PY_FREQ_MAX_MHZ + sample_rate // 2e6)]
 
-    if oversample:
-        samples_dtype = np.int8
-        if print_to_console:
-            sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
-            device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
-    else:
-        samples_dtype = np.int16
-        device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
-
     if print_to_console:
         sys.stderr.write(f'call pybladerf_set_tuning_mode({pybladerf.pybladerf_tuning_mode.PYBLADERF_TUNING_MODE_FPGA})\n')
     device.pybladerf_set_tuning_mode(pybladerf.pybladerf_tuning_mode.PYBLADERF_TUNING_MODE_FPGA)
@@ -262,10 +255,16 @@ cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_0
     else:
         device.pybladerf_set_sample_rate(channel, sample_rate)
 
-    if not oversample:
+    if oversample:
+        if print_to_console:
+            sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
+        device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
+        samples_dtype = np.int8
+    else:
         if print_to_console:
             sys.stderr.write(f'call pybladerf_set_bandwidth({channel}, {baseband_filter_bandwidth / 1e6 :.3f} MHz)\n')
         device.pybladerf_set_bandwidth(channel, baseband_filter_bandwidth)
+        samples_dtype = np.int16
 
     if print_to_console:
         sys.stderr.write(f'call pybladerf_set_gain_mode({channel}, {pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC})\n')

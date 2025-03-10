@@ -251,6 +251,7 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
         device = pybladerf.pybladerf_open_by_serial(serial_number)
 
     run_available[device.serialno] = True
+    device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
 
     if oversample:
         sample_rate = int(sample_rate) if MIN_SAMPLE_RATE * 2 <= int(sample_rate) <= MAX_SAMPLE_RATE * 2 else 122_000_000
@@ -298,11 +299,6 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
     else:
         frequency = DEFAULT_FREQUENCY
 
-    if oversample:
-        if print_to_console:
-            sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
-            device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
-
     if print_to_console:
         sys.stderr.write(f'call pybladerf_set_sample_rate({sample_rate / 1e6 :.3f} MHz)\n')
     if oversample:
@@ -310,7 +306,11 @@ cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_0
     else:
         device.pybladerf_set_sample_rate(channel, sample_rate)
 
-    if not oversample:
+    if oversample:
+        if print_to_console:
+            sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
+        device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
+    else:
         if print_to_console:
             sys.stderr.write(f'call pybladerf_set_bandwidth({channel}, {baseband_filter_bandwidth / 1e6 :.3f} MHz)\n')
         device.pybladerf_set_bandwidth(channel, baseband_filter_bandwidth)
