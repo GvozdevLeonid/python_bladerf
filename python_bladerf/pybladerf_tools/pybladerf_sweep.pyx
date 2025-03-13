@@ -186,7 +186,7 @@ cdef void process_data(object device):
     event_finished.set()
 
 
-cpdef void pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int = None,
+def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int = None,
                            gain: int = 20, bin_width: int = 100_000, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
                            sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, serial_number: str = None,
                            binary_output: bool = False, one_shot: bool = False, num_sweeps: int = None,
