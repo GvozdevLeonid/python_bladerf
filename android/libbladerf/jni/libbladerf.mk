@@ -111,7 +111,7 @@ LOCAL_LDFLAGS := -pthread
 
 LOCAL_LDLIBS := -L$(GLOBAL_LOCAL_PATH) -lusb1.0 -llog
 
-LOCAL_MODULE := libbladerf
+LOCAL_MODULE := libbladeRF
 
 LOCAL_STATIC_LIBRARIES := libad936x
 

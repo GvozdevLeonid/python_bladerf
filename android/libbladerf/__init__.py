@@ -88,7 +88,7 @@ class LibbladerfRecipe(NDKRecipe):
                 _env=env,
             )
 
-        shutil.copyfile(os.path.join(self.get_build_dir(arch.arch), 'android', 'libs', arch.arch, 'libbladerf.so'), os.path.join(self.ctx.get_libs_dir(arch.arch), 'libbladerf.so'))
+        shutil.copyfile(os.path.join(self.get_build_dir(arch.arch), 'android', 'libs', arch.arch, 'libbladeRF.so'), os.path.join(self.ctx.get_libs_dir(arch.arch), 'libbladeRF.so'))
 
 
 recipe = LibbladerfRecipe()
