@@ -540,7 +540,7 @@ cdef extern from 'libbladeRF.h' nogil:
 
     const char *bladerf_strerror(int error)
 
-cdef extern from 'Bladerf2.h' nogil:
+cdef extern from 'bladeRF2.h' nogil:
     int bladerf_get_bias_tee(bladerf *dev, int ch, bint *enable)
 
     int bladerf_set_bias_tee(bladerf *dev, int ch, bint enable)
