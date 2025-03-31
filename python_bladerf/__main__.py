@@ -66,8 +66,8 @@ def main() -> None:
 
     args, _ = parser.parse_known_args()
     if args.command == 'info':
-        if args.device_identifiers:
-            pybladerf_info.pybladerf_device_identifiers_list_info()
+        if args.serial_numbers:
+            pybladerf_info.pybladerf_serial_numbers_list_info()
         else:
             pybladerf_info.pybladerf_info()
 
