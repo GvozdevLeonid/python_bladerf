@@ -50,10 +50,6 @@ DEFAULT_FREQUENCY = 900_000_000
 cdef dict run_available = {}
 cdef dict device_data = {}
 
-ctypedef fused sample_format:
-    cnp.int16_t
-    cnp.int8_t
-
 
 def sigint_callback_handler(sig, frame):
     global run_available
