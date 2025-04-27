@@ -248,23 +248,24 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
         sys.stderr.write(f'call pybladerf_set_tuning_mode({pybladerf.pybladerf_tuning_mode.PYBLADERF_TUNING_MODE_FPGA})\n')
     device.pybladerf_set_tuning_mode(pybladerf.pybladerf_tuning_mode.PYBLADERF_TUNING_MODE_FPGA)
 
-    if print_to_console:
-        sys.stderr.write(f'call pybladerf_set_sample_rate({sample_rate / 1e6 :.3f} MHz)\n')
-    if oversample:
-        device.pybladerf_set_sample_rate(channel, sample_rate // 2)
-    else:
-        device.pybladerf_set_sample_rate(channel, sample_rate)
-
     if oversample:
         if print_to_console:
             sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
         device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
         samples_dtype = np.int8
     else:
+        device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
+        samples_dtype = np.int16
+
+    if print_to_console:
+        sys.stderr.write(f'call pybladerf_set_sample_rate({sample_rate / 1e6 :.3f} MHz)\n')
+    device.pybladerf_set_sample_rate(channel, sample_rate)
+
+    if not oversample:
         if print_to_console:
             sys.stderr.write(f'call pybladerf_set_bandwidth({channel}, {baseband_filter_bandwidth / 1e6 :.3f} MHz)\n')
         device.pybladerf_set_bandwidth(channel, baseband_filter_bandwidth)
-        samples_dtype = np.int16
+
 
     if print_to_console:
         sys.stderr.write(f'call pybladerf_set_gain_mode({channel}, {pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC})\n')
