@@ -6,7 +6,7 @@ Before installing python_bladerf library, you must have bladerf host software in
 
 You can install this library using
 ```
-pip install python_bladerf
+pip install git+https://github.com/GvozdevLeonid/python_bladerf.git
 ```
 
 If your bladerf files are in non-standard paths and during installation the python_bladerf cannot find libbladeRF.h and bladeRF2.h or the library files, you can specify the paths via environment variables
