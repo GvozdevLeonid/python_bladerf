@@ -2,8 +2,9 @@
 
 python_bladerf is a cython wrapper for [bladerf](https://github.com/Nuand/bladeRF). It also contains some additional tools.
 
-Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file.
+Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file. Minimum libbladeRF version: 2.5.5
 
+For windows users please use [additional steps](#installation-on-windows) to install python_bladerf
 You can install this library using
 ```
 pip install git+https://github.com/GvozdevLeonid/python_bladerf.git
@@ -11,14 +12,11 @@ pip install git+https://github.com/GvozdevLeonid/python_bladerf.git
 
 If your bladerf files are in non-standard paths and during installation the python_bladerf cannot find libbladeRF.h and bladeRF2.h or the library files, you can specify the paths via environment variables
 ```
-export PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h_andbladeRF2.h
-export PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib, dll)
+export/set {linux and macos / windows}  PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h_andbladeRF2.h
+export/set {linux and macos / windows}  PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib, dll)
 ```
 
 ## Requirements:
-* libusb-1.0 (https://github.com/libusb/libusb)
-* libBladeRF (https://github.com/Nuand/bladeRF)
-* Cython==0.29.37
 * Numpy>=2.2.1
 * Scipy (optional, for faster work)
 * pyFFTW (optional, for faster work)
@@ -126,3 +124,44 @@ pythonforandroidrecipes/
 
 ## Examples
 Please use the original bladerf documentation
+
+## Installation on Windows
+To install python_bladerf, you must first install the BladeRF software. Official installation instructions are available on the [BladeRF documentation site](https://github.com/Nuand/bladeRF/wiki/Getting-Started%3A-Windows).
+Alternatively, you can download the ZIP archive from the Releases tab of this repository. Extract the archive and move its contents to the standard location: `C:\Program Files\BladeRF`
+
+The BladeRF directory should contain the following subfolders and files:
+```
+├── include
+│ └── libbladeRF.h
+│ └── bladeRF2.h
+│ └── bladeRF1.h
+│ └── pthread.h
+├── lib
+│ └── bladeRF.dll
+│ └── bladeRF.lib ← for MSVC
+│ └── libbladeRF.a ← for MinGW
+│ └── libusb-1.0.dll
+│ └── pthreadVC2.dll
+│ └── msvcr100.dll
+```
+
+
+In addition, the archive includes other required DLLs and dependencies to ensure proper operation of HackRF on Windows.
+libusb-1.0.dll
+pthreadVC2.dll
+msvcr100.dll
+
+If you install bladerf yourself or via another path, set the following environment variables
+
+MSVC:
+```
+  set PYTHON_BLADERF_CFLAGS=/I"{path to .h file directory}"
+  set PYTHON_BLADERF_LDFLAGS=/LIBPATH:"{path to .dll and .lib file directory}" bladeRF.lib
+  set BLADERF_LIB_DIR="{path to .dll and .lib file directory}"
+```
+MinGW:
+```
+  set PYTHON_BLADERF_CFLAGS=-I"{path to .h file directory}"
+  set PYTHONBLADERFF_LDFLAGS=-L"{path to .dll and .a file directory}" -lbladeRF'
+  set BLADERF_LIB_DIR="{path to .dll and .lib file directory}"
+```

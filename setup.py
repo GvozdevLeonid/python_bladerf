@@ -1,9 +1,10 @@
 import subprocess
 import sys
-from os import environ, getenv
+from os import environ, getenv, path
 
 import numpy
 from setuptools import Extension, find_packages, setup
+from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
@@ -44,8 +45,22 @@ if PLATFORM != 'android':
         else:
             new_ldflags = environ.get('PYTHON_BLADERF_LDFLAGS', '')
 
-    elif PLATFORM == 'win32':
-        pass
+    elif PLATFORM.startswith('win'):
+        include_path = 'C:\\Program Files\\BladeRF\\include'
+        lib_path = 'C:\\Program Files\\BladeRF\\lib'
+
+        if environ.get('PYTHON_BLADERF_CFLAGS', None) is None:
+            new_cflags = f'-I"{include_path}"'
+        else:
+            new_cflags = environ.get('PYTHON_BLADERF_CFLAGS', '')
+
+        if environ.get('PYTHON_BLADERF_LDFLAGS', None) is None:
+            new_ldflags = f'-L"{lib_path}" -lbladeRF'
+        else:
+            new_ldflags = environ.get('PYTHON_BLADERF_LDFLAGS', '')
+
+        environ['CL'] = f'/I"{include_path}"'
+        environ['LINK'] = f'/LIBPATH:"{lib_path}" bladeRF.lib'
 
     environ['CFLAGS'] = f'{cflags} {new_cflags}'.strip()
     environ['LDFLAGS'] = f'{ldflags} {new_ldflags}'.strip()
@@ -61,9 +76,22 @@ class CustomBuildExt(build_ext):
         super().run()
 
 
+class InstallWithPth(install):
+    def run(self) -> None:
+        super().run()
+
+        if PLATFORM.startswith('win'):
+            pth_code = (
+                'import os; '
+                'os.add_dll_directory(os.getenv("BLADERF_LIB_DIR", "C:\\Program Files\\BladeRF\\lib"))'
+            )
+            with open(path.join(self.install_lib, "python_bladerf.pth"), mode='w', encoding='utf-8') as file:
+                file.write(pth_code)
+
+
 setup(
     name='python_bladerf',
-    cmdclass={'build_ext': CustomBuildExt},
+    cmdclass={'build_ext': CustomBuildExt, 'install': InstallWithPth},
     install_requires=INSTALL_REQUIRES,
     setup_requires=SETUP_REQUIRES,
     ext_modules=[
