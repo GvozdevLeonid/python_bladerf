@@ -8,3 +8,4 @@ dist/
 
 python_bladerf.egg-info
 python_bladerf/pybladerf_tools/pybladerf_transfer_async.pyx
+*.zip
