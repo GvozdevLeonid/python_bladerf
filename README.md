@@ -2,7 +2,7 @@
 
 python_bladerf is a cython wrapper for [bladerf](https://github.com/Nuand/bladeRF). It also contains some additional tools.
 
-Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file. Minimum libbladeRF version: 2.5.5
+Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file. Minimum libbladeRF version: 2.5.1
 
 For windows users please use [additional steps](#installation-on-windows) to install python_bladerf
 You can install this library using
