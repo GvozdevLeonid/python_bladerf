@@ -83,7 +83,7 @@ class InstallWithPth(install):
         if PLATFORM.startswith('win'):
             pth_code = (
                 'import os; '
-                'os.add_dll_directory(os.getenv("BLADERF_LIB_DIR", "C:\\Program Files\\BladeRF\\lib"))'
+                'os.add_dll_directory(os.getenv("BLADERF_LIB_DIR", r"C:\\Program Files\\BladeRF\\lib"))'
             )
             with open(path.join(self.install_lib, "python_bladerf.pth"), mode='w', encoding='utf-8') as file:
                 file.write(pth_code)
