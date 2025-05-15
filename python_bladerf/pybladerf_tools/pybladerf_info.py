@@ -46,6 +46,7 @@ def pybladerf_info(print_to_console: bool = True) -> str | None:
     else:
         print_info += 'No BladeRF boards found.'
 
+    del device_list
     if print_to_console:
         print(print_info)
         return None
@@ -55,9 +56,12 @@ def pybladerf_info(print_to_console: bool = True) -> str | None:
 
 def pybladerf_serial_numbers_list_info(print_to_console: bool = True) -> tuple[int, list] | None:
     device_list = pybladerf.PyBladeRFDeviceList()
+    device_count = device_list.device_count
+    serial_numbers = device_list.serial_numbers
 
+    del device_list
     if print_to_console:
-        print(f'Serial numbers [{device_list.device_count}]: {device_list.serial_numbers}')
+        print(f'Serial numbers [{device_count}]: {serial_numbers}')
         return None
 
-    return device_list.device_count, device_list.serial_numbers
+    return device_count, serial_numbers
