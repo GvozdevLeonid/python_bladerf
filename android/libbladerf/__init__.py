@@ -16,8 +16,8 @@ class LibbladerfRecipe(NDKRecipe):
     generated_libraries = ('libbladerf.so', )
     site_packages_name = 'libbladerf'
     library_version_major = '2'
-    library_version_minor = '5'
-    library_version_patch = '1'
+    library_version_minor = '6'
+    library_version_patch = '0'
 
     depends = ('libusb', )
     name = 'libbladerf'
