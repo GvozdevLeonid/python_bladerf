@@ -10,14 +10,14 @@ from pythonforandroid.util import current_directory
 
 class LibbladerfRecipe(NDKRecipe):
 
-    # url = 'https://github.com/Nuand/bladeRF/archive/refs/tags/{version}.tar.gz'
     url = 'git+https://github.com/Nuand/bladeRF.git'
+    version = 'f81b82aa8e75ee8866d1aede2a09191d92399829'
     patches = ('bladerf_android.patch', )
     generated_libraries = ('libbladerf.so', )
     site_packages_name = 'libbladerf'
     library_version_major = '2'
-    library_version_minor = '6'
-    library_version_patch = '0'
+    library_version_minor = '5'
+    library_version_patch = '1'
 
     depends = ('libusb', )
     name = 'libbladerf'
