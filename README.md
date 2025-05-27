@@ -18,6 +18,7 @@ export/set {linux and macos / windows}  PYTHON_BLADERF_LDFLAGS=path_to_libblader
 
 ## Requirements:
 * Numpy>=2.2.1
+* Cython==0.29.37
 * Scipy (optional, for faster work)
 * pyFFTW (optional, for faster work)
 * pyjnius and android (only for android)
