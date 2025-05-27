@@ -231,11 +231,11 @@ cpdef void tx_process(object device):
     device_data[device.serialno]['event'].set()
 
 
-cpdef void pybladerf_transfer(frequency: int = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int = None,
-                              gain: int = 0, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
-                              repeat_tx: bool = False, synchronize: bool = False, num_samples: int = None, serial_number: str = None,
-                              rx_filename: str = None, tx_filename: str = None, rx_buffer: object = None, tx_buffer: object = None,
-                              print_to_console: bool = True):
+def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int | None = None,
+                       gain: int = 0, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
+                       repeat_tx: bool = False, synchronize: bool = False, num_samples: int | None = None, serial_number: str | None = None,
+                       rx_filename: str | None = None, tx_filename: str | None = None, rx_buffer: object | None = None, tx_buffer: object | None = None,
+                       print_to_console: bool = True) -> None:
 
     global run_available, device_data
 
