@@ -1,12 +1,12 @@
-import subprocess
+import subprocess  # noqa I001
 import sys
 from os import environ, getenv, path
 
 import numpy
-from setuptools import Extension, find_packages, setup
-from setuptools.command.install import install
-from setuptools.command.build_ext import build_ext
-from Cython.Build import cythonize
+from setuptools import Extension, find_packages, setup  # type: ignore
+from setuptools.command.install import install  # type: ignore
+from setuptools.command.build_ext import build_ext  # type: ignore
+from Cython.Build import cythonize  # type: ignore
 
 libraries = ['bladeRF']
 
@@ -27,6 +27,8 @@ if PLATFORM != 'android':
 
     cflags = environ.get('CFLAGS', '')
     ldflags = environ.get('LDFLAGS', '')
+    new_cflags = ''
+    new_ldflags = ''
 
     if PLATFORM in {'linux', 'darwin'}:
         if environ.get('PYTHON_BLADERF_CFLAGS', None) is None:
@@ -66,17 +68,17 @@ if PLATFORM != 'android':
     environ['LDFLAGS'] = f'{ldflags} {new_ldflags}'.strip()
 
 
-class CustomBuildExt(build_ext):
+class CustomBuildExt(build_ext):  # type: ignore
     def run(self) -> None:
         compile_env = {'ANDROID': PLATFORM == 'android'}
-        self.distribution.ext_modules = cythonize(
+        self.distribution.ext_modules = cythonize(  # type: ignore
             self.distribution.ext_modules,
             compile_time_env=compile_env,
         )
         super().run()
 
 
-class InstallWithPth(install):
+class InstallWithPth(install):  # type: ignore
     def run(self) -> None:
         super().run()
 

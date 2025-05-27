@@ -1,14 +1,15 @@
 import os
 import shutil
+from typing import Any
 
-import sh
-from pythonforandroid.archs import Arch
-from pythonforandroid.logger import shprint
-from pythonforandroid.recipe import NDKRecipe
-from pythonforandroid.util import current_directory
+import sh  # type: ignore
+from pythonforandroid.archs import Arch  # type: ignore
+from pythonforandroid.logger import shprint  # type: ignore
+from pythonforandroid.recipe import NDKRecipe  # type: ignore
+from pythonforandroid.util import current_directory  # type: ignore
 
 
-class LibusbRecipe(NDKRecipe):
+class LibusbRecipe(NDKRecipe):  # type: ignore
 
     url = 'https://github.com/libusb/libusb/archive/refs/tags/v{version}.tar.gz'
     generated_libraries = ('libusb-1.0.so', )
@@ -25,7 +26,7 @@ class LibusbRecipe(NDKRecipe):
     def get_lib_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
-    def build_arch(self, arch: Arch, *extra_args) -> None:
+    def build_arch(self, arch: Arch, *extra_args: Any) -> None:
         env = self.get_recipe_env(arch)
         with current_directory(self.get_build_dir(arch.arch)):
             shprint(

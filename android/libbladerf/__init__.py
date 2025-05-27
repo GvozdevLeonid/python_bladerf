@@ -1,14 +1,15 @@
 import os
 import shutil
+from typing import Any
 
-import sh
-from pythonforandroid.archs import Arch
-from pythonforandroid.logger import shprint
-from pythonforandroid.recipe import NDKRecipe, Recipe
-from pythonforandroid.util import current_directory
+import sh  # type: ignore
+from pythonforandroid.archs import Arch  # type: ignore
+from pythonforandroid.logger import shprint  # type: ignore
+from pythonforandroid.recipe import NDKRecipe, Recipe  # type: ignore
+from pythonforandroid.util import current_directory  # type: ignore
 
 
-class LibbladerfRecipe(NDKRecipe):
+class LibbladerfRecipe(NDKRecipe):  # type: ignore
 
     url = 'git+https://github.com/Nuand/bladeRF.git'
     version = 'f81b82aa8e75ee8866d1aede2a09191d92399829'
@@ -56,11 +57,11 @@ class LibbladerfRecipe(NDKRecipe):
                 '-DLIBBLADERF_BACKEND_CONFIG_DIR=' + os.path.join(self.get_build_dir(arch.arch), 'host', 'libraries', 'libbladeRF', 'src', 'backend'),
                 '-DLIBBLADERF_ROOT_DIR=' + self.get_build_dir(arch.arch),
                 '-P',
-                os.path.join(self.get_recipe_dir(),'pre_install.cmake'),
+                os.path.join(self.get_recipe_dir(), 'pre_install.cmake'),
             )
 
-    def get_recipe_env(self, arch: Arch) -> dict:
-        env = super().get_recipe_env(arch)
+    def get_recipe_env(self, arch: Arch) -> dict[str, Any]:
+        env: dict[str, Any] = super().get_recipe_env(arch)
         env['LDFLAGS'] += f'-L{self.ctx.get_libs_dir(arch.arch)}'
 
         return env
@@ -71,7 +72,7 @@ class LibbladerfRecipe(NDKRecipe):
     def get_lib_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
-    def build_arch(self, arch: Arch, *extra_args) -> None:
+    def build_arch(self, arch: Arch, *extra_args: Any) -> None:
         env = self.get_recipe_env(arch)
 
         shutil.copyfile(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libusb1.0.so'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni', 'libusb1.0.so'))

@@ -59,7 +59,6 @@ def main() -> None:
     pybladerf_transfer_parser.add_argument('-H', action='store_true', help='synchronize RX/TX to external trigger input')
     pybladerf_transfer_parser.add_argument('-o', action='store_true', help='oversample. If specified = Enable')
 
-
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
@@ -82,17 +81,17 @@ def main() -> None:
                 pass
 
         pybladerf_sweep.pybladerf_sweep(frequencies=frequencies,
-                                        sample_rate=float(args.s) * 1e6,
-                                        baseband_filter_bandwidth=float(args.b) * 1e6 if args.b is not None else None,
+                                        sample_rate=int(float(args.s) * 1e6),
+                                        baseband_filter_bandwidth=int(float(args.b) * 1e6) if args.b is not None else None,
                                         gain=int(args.g),
                                         bin_width=int(args.w),
                                         channel=int(args.c),
                                         oversample=args.o,
                                         antenna_enable=args.p,
-                                        sweep_style=pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_LINEAR if args.s == 'L' else (pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED if args.s == 'I' else -1),
+                                        sweep_style=pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_LINEAR if args.s == 'L' else (pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED if args.s == 'I' else -1),  # type: ignore
                                         serial_number=args.d,
                                         binary_output=args.B,
-                                        one_shot=args.__dict__.get('1'),
+                                        one_shot=args.__dict__.get('1'),  # type: ignore
                                         num_sweeps=int(args.N) if args.N is not None else None,
                                         filename=args.r,
                                         print_to_console=True)
@@ -100,8 +99,8 @@ def main() -> None:
     elif args.command == 'transfer':
         pybladerf_transfer.pybladerf_transfer(
             frequency=int(args.freq_hz),
-            sample_rate=int(args.s) * 1e6,
-            baseband_filter_bandwidth=float(args.b) * 1e6 if args.b is not None else None,
+            sample_rate=int(float(args.s) * 1e6),
+            baseband_filter_bandwidth=int(float(args.b) * 1e6) if args.b is not None else None,
             gain=int(args.g),
             channel=int(args.c),
             oversample=args.o,

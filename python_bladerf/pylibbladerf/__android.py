@@ -20,36 +20,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from threading import Event
+from typing import Any
 
 try:
-    from jnius import (
+    from jnius import (  # type: ignore
         autoclass,
         cast,
     )
 except ImportError:
-    def autoclass(item):
+    def autoclass(item: Any) -> None:
         raise RuntimeError('autoclass not available')
 
-    def cast(item):
+    def cast(item: Any) -> None:
         raise RuntimeError('cast not available')
 
 try:
-    from android.broadcast import BroadcastReceiver
-    from android.runnable import run_on_ui_thread
+    from android.broadcast import BroadcastReceiver  # type: ignore
+    from android.runnable import run_on_ui_thread  # type: ignore
 except ImportError:
-    def BroadcastReceiver(item):
+    def BroadcastReceiver(item: Any) -> None:  # noqa N802
         raise RuntimeError('BroadcastReceiver not available')
 
-    def run_on_ui_thread(f):
+    def run_on_ui_thread(f: Any) -> None:
         raise RuntimeError('run_on_ui_thread not available')
 
 
 class USBBroadcastReceiver:
-    def __init__(self, events: dict) -> None:
+    def __init__(self, events: dict[Any, Any]) -> None:
         self.events = events
 
-    @run_on_ui_thread
+    @run_on_ui_thread  # type: ignore
     def start(self) -> None:
         self.br = BroadcastReceiver(self.on_broadcast, actions=['libusb.android.USB_PERMISSION'])
         self.br.start()
@@ -57,14 +59,14 @@ class USBBroadcastReceiver:
     def stop(self) -> None:
         self.br.stop()
 
-    def on_broadcast(self, context, intent) -> None:
+    def on_broadcast(self, context: Any, intent: Any) -> None:
         action = intent.getAction()
-        UsbManager = autoclass('android.hardware.usb.UsbManager')
+        usb_manager = autoclass('android.hardware.usb.UsbManager')
         if action == 'libusb.android.USB_PERMISSION':
-            usb_device = cast('android.hardware.usb.UsbDevice', intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+            usb_device = cast('android.hardware.usb.UsbDevice', intent.getParcelableExtra(usb_manager.EXTRA_DEVICE))
 
             if usb_device is not None:
-                granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, False)
+                granted = intent.getBooleanExtra(usb_manager.EXTRA_PERMISSION_GRANTED, False)
                 device_name = usb_device.getDeviceName()
 
                 if device_name in self.events:
@@ -77,8 +79,8 @@ bladerf_usb_vids = (0x2cf0, 0x1d50)
 bladerf_usb_pids = (0x5246, 0x5250, 0x6066)
 
 
-def get_bladerf_device_list(num_devices: int | None = None) -> list:
-    events = {}
+def get_bladerf_device_list(num_devices: int | None = None) -> list[tuple[int, int, str, str]]:
+    events: dict[Any, Any] = {}
     bladerf_device_list = []
     usb_broadcast_receiver = USBBroadcastReceiver(events)
 
@@ -113,7 +115,7 @@ def get_bladerf_device_list(num_devices: int | None = None) -> list:
                 if num_devices is not None and idx + 1 == num_devices:
                     break
 
-        if len(events):
+        if events:
             usb_broadcast_receiver.start()
             for _, info in events.items():
                 info['event'].wait()

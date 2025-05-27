@@ -20,8 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# ruff: noqa N802
+
 from enum import IntEnum
-from typing import Callable, Self
+from typing import Any, Callable, Self, override
 
 import numpy as np
 
@@ -68,8 +70,6 @@ pybladerf_metadata.timestamp field because the library will ensure the correct v
 PYBLADERF_META_FLAG_TX_BURST_END: int
 '''
 Mark the associated buffer as the end of a burst transmission. This will flush the remainder of the sync interface's current working buffer and enqueue samples into the hardware's transmit FIFO.
-
-As of libbladeRF v1.3.0, it is no longer necessary for the API user to ensure that the final 3 samples of a burst are 0i + 0j. libbladeRF now ensures this hardware requirement is upheld.
 
 Specifying this flag and flushing the sync interface's working buffer implies that the next timestamp that can be transmitted is the current timestamp plus the duration of the burst that this flag is ending and the remaining length of the remaining buffer that is flushed. (The buffer size, in this case, is the `buffer_size` value passed to the previous pybladerf_sync_config() call.)
 
@@ -206,6 +206,7 @@ class pybladerf_backend(IntEnum):
     PYBLADERF_BACKEND_DUMMY = ...
     '''Dummy used for development purposes'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -224,6 +225,7 @@ class pybladerf_fpga_size(IntEnum):
     PYBLADERF_FPGA_A9 = ...
     '''301 kLE FPGA (A9)'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -236,6 +238,7 @@ class pybladerf_dev_speed(IntEnum):
     PYBLADERF_DEVICE_SPEED_HIGH = ...
     PYBLADERF_DEVICE_SPEED_SUPER = ...
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -248,6 +251,7 @@ class pybladerf_fpga_source(IntEnum):
     PYBLADERF_FPGA_SOURCE_HOST = ...
     '''Last FPGA load was from host'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -258,6 +262,7 @@ class pybladerf_direction(IntEnum):
     PYBLADERF_TX = ...
     '''Transmit direction'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -272,6 +277,7 @@ class pybladerf_channel_layout(IntEnum):
     PYBLADERF_TX_X2 = ...
     '''x2 TX (MIMO)'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -307,6 +313,7 @@ class pybladerf_gain_mode(IntEnum):
 
     Only available on the bladeRF 2.0 Micro. This is an advanced option, and typically requires additional configuration for ideal performance.'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -333,6 +340,7 @@ class pybladerf_loopback(IntEnum):
     PYBLADERF_LB_RFIC_BIST = ...
     '''RFIC digital loopback (built-in self-test)'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -347,6 +355,7 @@ class pybladerf_trigger_role(IntEnum):
     PYBLADERF_TRIGGER_ROLE_SLAVE = ...
     '''This device is the trigger slave. This device's trigger signal will be an input and this devices will wait for the master's trigger signal assertion.'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -386,6 +395,7 @@ class pybladerf_trigger_signal(IntEnum):
     PYBLADERF_TRIGGER_USER_7 = ...
     '''Reserved for user SW/HW customizations'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -418,6 +428,7 @@ class pybladerf_rx_mux(IntEnum):
     Read samples from the baseband TX input to the FPGA (from the host)
     '''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -436,6 +447,7 @@ class pybladerf_stream_state(IntEnum):
     STREAM_DONE = ...
     '''Done and deallocated'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -454,6 +466,7 @@ class pybladerf_correction(IntEnum):
     PYBLADERF_CORR_GAIN = ...
     '''Adjusts gain correction value in [-1.0, 1.0], via provided values in the range of [-4096, 4096].'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -523,8 +536,8 @@ class pybladerf_format(IntEnum):
     For IQ sample meta mode, the Meta version ID and Stream flags should currently be set to values 0x00 and 0x00, respectively.
 
     *The number of samples in a block is dependent upon the USB speed being used:
-    - USB 2.0 Hi-Speed: 256 samples
-    - USB 3.0 SuperSpeed: 512 samples
+    - USB 2.0 Hi-Speed: 1024 samples
+    - USB 3.0 SuperSpeed: 2048 samples
 
     When using the pybladerf_sync_rx() and pybladerf_sync_tx() functions, the above details are entirely transparent; the caller need not be concerned with these details. These functions take care of packing/unpacking the metadata into/from the underlying stream and convey this information through the pybladerf_metadata structure.
 
@@ -591,14 +604,15 @@ class pybladerf_format(IntEnum):
     For IQ sample meta mode, the Meta version ID and Stream flags should currently be set to values 0x00 and 0x00, respectively.
 
     *The number of samples in a block is dependent upon the USB speed being used:
-    - USB 2.0 Hi-Speed: 256 samples
-    - USB 3.0 SuperSpeed: 512 samples
+    - USB 2.0 Hi-Speed: 1024 samples
+    - USB 3.0 SuperSpeed: 2048 samples
 
     When using the pybladerf_sync_rx() and pybladerf_sync_tx() functions, the above details are entirely transparent; the caller need not be concerned with these details. These functions take care of packing/unpacking the metadata into/from the underlying stream and convey this information through the pybladerf_metadata structure.
 
     However, when using the FN_STREAMING_ASYNC interface, the user is responsible for manually packing/unpacking the above metadata into/from their samples.
     '''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -623,6 +637,7 @@ class pybladerf_vctcxo_tamer_mode(IntEnum):
     PYBLADERF_VCTCXO_TAMER_10_MHZ = ...
     '''Use a 10 MHz input source to tame the VCTCXO.'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -634,8 +649,6 @@ class pybladerf_tuning_mode(IntEnum):
     PYBLADERF_TUNING_MODE_HOST is the default tuning mode.
 
     PYBLADERF_TUNING_MODE_FPGA requirements:
-    - libbladeRF >= v1.3.0
-    - FPGA       >= v0.2.0
 
     ! NOTE !
         Overriding this value with a mode not supported by the FPGA will result in failures or unexpected behavior.
@@ -647,6 +660,7 @@ class pybladerf_tuning_mode(IntEnum):
     PYBLADERF_TUNING_MODE_FPGA = ...
     '''Perform tuning algorithm on the FPGA for faster tuning.'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -657,6 +671,7 @@ class pybladerf_feature(IntEnum):
     PYBLADERF_FEATURE_OVERSAMPLE = ...
     '''Enforces AD9361 OC and 8bit mode'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -677,6 +692,7 @@ class pybladerf_log_level(IntEnum):
     PYBLADERF_LOG_LEVEL_SILENT = ...
     '''No output'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -693,6 +709,7 @@ class pybladerf_rfic_rxfir(IntEnum):
     PYBLADERF_RFIC_RXFIR_DEC4 = ...
     '''Decimate by 4'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -709,6 +726,7 @@ class pybladerf_rfic_txfir(IntEnum):
     PYBLADERF_RFIC_TXFIR_INT4 = ...
     '''Interpolate by 4'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -721,6 +739,7 @@ class pybladerf_power_sources(IntEnum):
     PYBLADERF_PS_USB_VBUS = ...
     '''USB Bus'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -731,6 +750,7 @@ class pybladerf_clock_select(IntEnum):
     PYCLOCK_SELECT_EXTERNAL = ...
     '''Use external clock input'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -749,6 +769,7 @@ class pybladerf_pmic_register(IntEnum):
     PYBLADERF_PMIC_CALIBRATION = ...
     '''Calibration (uint16_t)'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -763,6 +784,7 @@ class pybladerf_sweep_style(IntEnum):
     PYBLADERF_SWEEP_STYLE_INTERLEAVED = 1
     '''each step is divided into two interleaved sub-steps, allowing the host to select the best portions of the FFT of each sub-step and discard the rest.'''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -771,13 +793,13 @@ class pybladerf_devinfo:
     '''Information about a bladeRF attached to the system'''
 
     def __init__(self,
-                 backend: pybladerf_backend = None,
-                 serial: str = None,
-                 usb_bus: int = None,
-                 usb_addr: int = None,
-                 instance: int = None,
-                 manufacturer: str = None,
-                 product: str = None) -> None:
+                 backend: pybladerf_backend = pybladerf_backend.PYBLADERF_BACKEND_ANY,
+                 serial: str  = 'ANY',
+                 usb_bus: int = 255,
+                 usb_addr: int = 255,
+                 instance: int = 4294967295,
+                 manufacturer: str = 'unknown',
+                 product: str = 'unknown') -> None:
         ...
 
     @property
@@ -819,12 +841,13 @@ class pybladerf_version:
     '''Version structure for python_bladerf, FPGA, firmware, libbladeRF, and associated utilities'''
 
     def __init__(self,
-                 major: int = None,
-                 minor: int = None,
-                 patch: int = None,
-                 describe: str = None) -> None:
+                 major: int | None = None,
+                 minor: int | None = None,
+                 patch: int | None = None,
+                 describe: str | None = None) -> None:
         ...
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -856,12 +879,13 @@ class pybladerf_trigger:
     '''
 
     def __init__(self,
-                   channel: int = None,
-                   role: pybladerf_trigger_role = None,
-                   signal: pybladerf_trigger_signal = None,
-                   options: int = None) -> None:
+                   channel: int | None = None,
+                   role: pybladerf_trigger_role | None = None,
+                   signal: pybladerf_trigger_signal | None = None,
+                   options: int | None = None) -> None:
         ...
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -896,16 +920,16 @@ class pybladerf_quick_tune:
     '''
 
     def __init__(self,
-                 freqsel: int = None,
-                 vcocap: int = None,
-                 nint: int = None,
-                 nfrac: int = None,
-                 flags: int = None,
-                 xb_gpio: int = None,
-                 nios_profile: int = None,
-                 rffe_profile: int = None,
-                 port: int = None,
-                 spdt: int = None) -> None:
+                 freqsel: int | None = None,
+                 vcocap: int | None = None,
+                 nint: int | None = None,
+                 nfrac: int | None = None,
+                 flags: int | None = None,
+                 xb_gpio: int | None = None,
+                 nios_profile: int | None = None,
+                 rffe_profile: int | None = None,
+                 port: int | None = None,
+                 spdt: int | None = None) -> None:
         ...
 
     @property
@@ -966,13 +990,14 @@ class pybladerf_metadata:
     '''
 
     def __init__(self,
-                 timestamp: int = None,
-                 flags: int = None,
-                 status: int = None,
-                 actual_count: int = None) -> None:
+                 timestamp: int | None = None,
+                 flags: int | None = None,
+                 status: int | None = None,
+                 actual_count: int | None = None) -> None:
         ...
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         ...
 
     @property
@@ -1021,14 +1046,14 @@ class pybladerf_rf_switch_config:
     '''RF switch configuration structure'''
 
     def __init__(self,
-                 tx1_rfic_port: int = None,
-                 tx1_spdt_port: int = None,
-                 tx2_rfic_port: int = None,
-                 tx2_spdt_port: int = None,
-                 rx1_rfic_port: int = None,
-                 rx1_spdt_port: int = None,
-                 rx2_rfic_port: int = None,
-                 rx2_spdt_port: int = None) -> None:
+                 tx1_rfic_port: int | None = None,
+                 tx1_spdt_port: int | None = None,
+                 tx2_rfic_port: int | None = None,
+                 tx2_spdt_port: int | None = None,
+                 rx1_rfic_port: int | None = None,
+                 rx1_spdt_port: int | None = None,
+                 rx2_rfic_port: int | None = None,
+                 rx2_spdt_port: int | None = None) -> None:
         ...
 
     @property
@@ -1080,6 +1105,7 @@ class pybladerf_range:
         This class is read-only
     '''
 
+    @override
     def __str__(self) -> str:
         ...
 
@@ -1503,7 +1529,7 @@ class PyBladerfDevice:
         '''Gets the current RX Mux mode'''
         ...
 
-    def pybladerf_schedule_retune(self, channel: int, timestamp: int, frequency: int, quick_tune: pybladerf_quick_tune = None) -> None:
+    def pybladerf_schedule_retune(self, channel: int, timestamp: int, frequency: int, quick_tune: pybladerf_quick_tune | None = None) -> None:
         '''
         Schedule a frequency retune to occur at specified sample timestamp value.
 
@@ -1549,11 +1575,11 @@ class PyBladerfDevice:
         '''Obtain the current value of the specified configuration parameter'''
         ...
 
-    def pybladerf_interleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray) -> None:
+    def pybladerf_interleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray[Any, Any]) -> None:
         '''Interleaves contiguous blocks of samples in preparation for MIMO TX.'''
         ...
 
-    def pybladerf_deinterleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray) -> None:
+    def pybladerf_deinterleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray[Any, Any]) -> None:
         '''Deinterleaves samples into contiguous blocks after MIMO RX.'''
         ...
 
@@ -1599,14 +1625,14 @@ class PyBladerfDevice:
 
         Memory allocated by this function will be deallocated when pybladerf_close() is called.
 
-        See the pybladerf_init_stream() documentation for information on determining appropriate values for `buffers_size`, `num_transfers`, and `stream_timeout`.
+        See the pybladerf_init_(rx/tx)_stream() documentation for information on determining appropriate values for `buffers_size`, `num_transfers`, and `stream_timeout`.
 
         ! NOTE !
             The `num_buffers` parameter should generally be increased as the amount of work done between bladerf_sync_rx() or bladerf_sync_tx() calls increases.
         '''
         ...
 
-    def pybladerf_sync_tx(self, samples: np.ndarray, num_samples: int, metadata: pybladerf_metadata = None, timeout_ms: int = 0) -> None:
+    def pybladerf_sync_tx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         '''
         Transmit IQ samples.
 
@@ -1621,7 +1647,7 @@ class PyBladerfDevice:
         '''
         ...
 
-    def pybladerf_sync_rx(self, samples: np.ndarray, num_samples: int, metadata: pybladerf_metadata = None, timeout_ms: int = 0) -> None:
+    def pybladerf_sync_rx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         '''
         Receive IQ samples.
 
@@ -1696,7 +1722,7 @@ class PyBladerfDevice:
         '''
         ...
 
-    def pybladerf_submit_stream_buffer(self, stream: pybladerf_stream, buffer: np.ndarray, timeout_ms: int) -> None:
+    def pybladerf_submit_stream_buffer(self, stream: pybladerf_stream, buffer: np.ndarray[Any, Any], timeout_ms: int) -> None:
         '''
         Submit a buffer to a stream from outside of a stream callback function.
 
@@ -1708,7 +1734,7 @@ class PyBladerfDevice:
         '''
         ...
 
-    def pybladerf_submit_stream_buffer_nb(self, stream: pybladerf_stream, buffer: np.ndarray, timeout_ms: int) -> None:
+    def pybladerf_submit_stream_buffer_nb(self, stream: pybladerf_stream, buffer: np.ndarray[Any, Any]) -> None:
         '''
         This is a non-blocking variant of pybladerf_submit_stream_buffer(). All of the caveats and important notes from pybladerf_submit_stream_buffer() apply.
 
@@ -1738,7 +1764,7 @@ class PyBladerfDevice:
         '''Reset the device, causing it to reload its firmware from flash'''
         ...
 
-    def pybladerf_get_fw_log(self, filename: str = None) -> None:
+    def pybladerf_get_fw_log(self, filename: str | None = None) -> None:
         '''
         Read firmware log data and write it to the specified file
 
@@ -1949,7 +1975,7 @@ class PyBladerfDevice:
         '''
 
     # ---- python callbacks setters ---- #
-    def set_rx_callback(self, rx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray, int], int]) -> None:
+    def set_rx_callback(self, rx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int], int]) -> None:
         '''
         Accept a 4 args that contains the device, pystream, buffer and number of complex samples in the buffer data.
         device: PyBladerfDevice, pystream: pybladerf_stream, buffer: numpy.array(dtype=numpy.int8 | numpy.int16), num_samples: int
@@ -1960,7 +1986,7 @@ class PyBladerfDevice:
         '''
         ...
 
-    def set_tx_callback(self, tx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray, int, int], int]) -> None:
+    def set_tx_callback(self, tx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int, int], int]) -> None:
         '''
         Accept a 5 args that contains the device, pystream, buffer, the number of complex samples and the valid complex samples in the buffer data.
         device: PyBladerfDevice, pystream: pybladerf_stream, buffer: numpy.array(dtype=numpy.int8 | numpy.int16), num_samples: int, valid_num_samples: int
@@ -1972,7 +1998,7 @@ class PyBladerfDevice:
         '''
         ...
 
-    def set_tx_complete_callback(self, tx_complete_callback_function: Callable[[Self, pybladerf_stream, np.ndarray, int], None]) -> None:
+    def set_tx_complete_callback(self, tx_complete_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int], None]) -> None:
         '''
         Accept a 4 args that contains the device, buffer and number of complex samples in the buffer data.
         device: PyBladerfDevice, pystream: pybladerf_stream, buffer: numpy.array(dtype=numpy.int8 | numpy.int16), num_samples: int

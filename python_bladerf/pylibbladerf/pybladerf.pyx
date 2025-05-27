@@ -25,6 +25,7 @@ from python_bladerf import __version__
 from libc.stdint cimport uint8_t, int16_t, uint16_t, int32_t, uint32_t, uint64_t, uintptr_t
 from libc.string cimport memcpy, memset, strncpy
 from cpython cimport Py_INCREF, Py_DECREF
+from typing import Any, Callable, Self
 from libc.stdlib cimport malloc, free
 from enum import IntEnum
 from ctypes import c_int
@@ -417,8 +418,8 @@ cdef class pybladerf_devinfo:
                  usb_bus: int = 255,
                  usb_addr: int = 255,
                  instance: int = 4294967295,
-                 manufacturer: str = None,
-                 product: str = None) -> None:
+                 manufacturer: str = 'unknown',
+                 product: str = 'unknown') -> None:
 
         self.__bladerf_devinfo = <cbladerf.bladerf_devinfo*> malloc(sizeof(cbladerf.bladerf_devinfo))
         memset(self.__bladerf_devinfo.serial, 0, cbladerf.BLADERF_SERIAL_LENGTH)
@@ -440,6 +441,7 @@ cdef class pybladerf_devinfo:
     def __str__(self) -> str:
         if self.__bladerf_devinfo != NULL:
             return f'{cbladerf.bladerf_backend_str(self.backend).decode("utf-8")}:device={self.usb_bus}:{self.usb_addr} instance={self.instance} serial={self.serial}'
+        return ''
 
     property backend:
         def __get__(self) -> pybladerf_backend:
@@ -513,10 +515,10 @@ cdef class pybladerf_devinfo:
 cdef class pybladerf_version:
 
     def __init__(self,
-                 major: int = None,
-                 minor: int = None,
-                 patch: int = None,
-                 describe: str = None) -> None:
+                 major: int | None = None,
+                 minor: int | None = None,
+                 patch: int | None = None,
+                 describe: str | None = None) -> None:
 
         self.__bladerf_version = <cbladerf.bladerf_version*> malloc(sizeof(cbladerf.bladerf_version))
 
@@ -532,6 +534,7 @@ cdef class pybladerf_version:
     def __str__(self) -> str:
         if self.__bladerf_version != NULL:
             return f'{self.major}.{self.minor}.{self.patch} \"{self.describe}\"'
+        return ''
 
     property major:
         def __get__(self) -> int:
@@ -579,10 +582,10 @@ cdef class pybladerf_version:
 cdef class pybladerf_trigger:
 
     def __init__(self,
-                   channel: int = None,
-                   role: pybladerf_trigger_role = None,
-                   signal: pybladerf_trigger_signal = None,
-                   options: int = None) -> None:
+                   channel: int | None = None,
+                   role: pybladerf_trigger_role | None = None,
+                   signal: pybladerf_trigger_signal | None = None,
+                   options: int | None = None) -> None:
 
         self.__bladerf_trigger = <cbladerf.bladerf_trigger*> malloc(sizeof(cbladerf.bladerf_trigger))
 
@@ -598,6 +601,7 @@ cdef class pybladerf_trigger:
     def __str__(self) -> str:
         if self.__bladerf_trigger != NULL:
             return f'channel:{self.channel} role:{self.role} signal:{self.signal} options:{self.options}'
+        return ''
 
     property channel:
         def __get__(self) -> int:
@@ -644,16 +648,16 @@ cdef class pybladerf_trigger:
 cdef class pybladerf_quick_tune:
 
     def __init__(self,
-                 freqsel: int = None,
-                 vcocap: int = None,
-                 nint: int = None,
-                 nfrac: int = None,
-                 flags: int = None,
-                 xb_gpio: int = None,
-                 nios_profile: int = None,
-                 rffe_profile: int = None,
-                 port: int = None,
-                 spdt: int = None) -> None:
+                 freqsel: int | None = None,
+                 vcocap: int | None = None,
+                 nint: int | None = None,
+                 nfrac: int | None = None,
+                 flags: int | None = None,
+                 xb_gpio: int | None = None,
+                 nios_profile: int | None = None,
+                 rffe_profile: int | None = None,
+                 port: int | None = None,
+                 spdt: int | None = None) -> None:
 
         self.__bladerf_quick_tune = <cbladerf.bladerf_quick_tune*> malloc(sizeof(cbladerf.bladerf_quick_tune))
 
@@ -771,10 +775,10 @@ cdef class pybladerf_quick_tune:
 cdef class pybladerf_metadata:
 
     def __init__(self,
-                 timestamp: int = None,
-                 flags: int = None,
-                 status: int = None,
-                 actual_count: int = None) -> None:
+                 timestamp: int | None = None,
+                 flags: int | None = None,
+                 status: int | None = None,
+                 actual_count: int | None = None) -> None:
 
         self.__bladerf_metadata = <cbladerf.bladerf_metadata*> malloc(sizeof(cbladerf.bladerf_metadata))
 
@@ -787,9 +791,10 @@ cdef class pybladerf_metadata:
         if self.__bladerf_metadata != NULL:
             free(self.__bladerf_metadata)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.__bladerf_metadata != NULL:
             return f'timestamp:{self.timestamp} flags:{self.flags} status:{self.status} actual_count:{self.actual_count}'
+        return ''
 
     property timestamp:
         def __get__(self) -> int:
@@ -836,14 +841,14 @@ cdef class pybladerf_metadata:
 cdef class pybladerf_rf_switch_config:
 
     def __init__(self,
-                 tx1_rfic_port: int = None,
-                 tx1_spdt_port: int = None,
-                 tx2_rfic_port: int = None,
-                 tx2_spdt_port: int = None,
-                 rx1_rfic_port: int = None,
-                 rx1_spdt_port: int = None,
-                 rx2_rfic_port: int = None,
-                 rx2_spdt_port: int = None) -> None:
+                 tx1_rfic_port: int | None = None,
+                 tx1_spdt_port: int | None = None,
+                 tx2_rfic_port: int | None = None,
+                 tx2_spdt_port: int | None = None,
+                 rx1_rfic_port: int | None = None,
+                 rx1_spdt_port: int | None = None,
+                 rx2_rfic_port: int | None = None,
+                 rx2_spdt_port: int | None = None) -> None:
 
         self.__bladerf_rf_switch_config = <cbladerf.bladerf_rf_switch_config*> malloc(sizeof(cbladerf.bladerf_rf_switch_config))
 
@@ -944,6 +949,7 @@ cdef class pybladerf_range:
     def __str__(self) -> str:
         if self.__bladerf_range != NULL:
             return f'min:{self.min} max:{self.max} step:{self.step} scale:{round(self.scale, 10)}'
+        return ''
 
     property min:
         def __get__(self) -> int:
@@ -1606,7 +1612,7 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_get_rx_mux()', result)
         return pybladerf_rx_mux(mux)
 
-    def pybladerf_schedule_retune(self, channel: int, timestamp: int, frequency: int, quick_tune: pybladerf_quick_tune = None) -> None:
+    def pybladerf_schedule_retune(self, channel: int, timestamp: int, frequency: int, quick_tune: pybladerf_quick_tune | None = None) -> None:
         cdef cbladerf.bladerf_quick_tune *c_quick_tune_ptr = quick_tune.get_ptr() if quick_tune is not None else NULL
         cdef uint64_t c_timestamp = <uint64_t> timestamp
         cdef uint64_t c_frequency = <uint64_t> frequency
@@ -1637,11 +1643,11 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_get_correction()', result)
         return value
 
-    def pybladerf_interleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray) -> None:
+    def pybladerf_interleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray[Any, Any]) -> None:
         result = cbladerf.bladerf_interleave_stream_buffer(layout, data_format, <unsigned int> buffer_size, <void*> <uintptr_t> samples.ctypes.data)
         raise_error('pybladerf_interleave_stream_buffer()', result)
 
-    def pybladerf_deinterleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray) -> None:
+    def pybladerf_deinterleave_stream_buffer(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, buffer_size: int, samples: np.ndarray[Any, Any]) -> None:
         result = cbladerf.bladerf_deinterleave_stream_buffer(layout, data_format, <unsigned int> buffer_size, <void*> <uintptr_t> samples.ctypes.data)
         raise_error('pybladerf_deinterleave_stream_buffer()', result)
 
@@ -1659,7 +1665,7 @@ cdef class PyBladerfDevice:
         result = cbladerf.bladerf_sync_config(self.__bladerf_device, layout, data_format, <unsigned int> num_buffers, <unsigned int> buffer_size, <unsigned int> num_transfers, <unsigned int> stream_timeout)
         raise_error('pybladerf_sync_config()', result)
 
-    def pybladerf_sync_tx(self, samples: np.ndarray, num_samples: int, metadata: pybladerf_metadata = None, timeout_ms: int = 0) -> None:
+    def pybladerf_sync_tx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         cdef cbladerf.bladerf_metadata *c_metadata_ptr =  metadata.get_ptr() if metadata is not None else NULL
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1670,7 +1676,7 @@ cdef class PyBladerfDevice:
             result = cbladerf.bladerf_sync_tx(self.__bladerf_device, c_samples_ptr, c_num_samples, c_metadata_ptr, c_timeout_ms)
         raise_error('pybladerf_sync_tx()', result)
 
-    def pybladerf_sync_rx(self, samples: np.ndarray, num_samples: int, metadata: pybladerf_metadata = None, timeout_ms: int = 0) -> None:
+    def pybladerf_sync_rx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         cdef cbladerf.bladerf_metadata *c_metadata_ptr = metadata.get_ptr() if metadata is not None else NULL
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1744,7 +1750,7 @@ cdef class PyBladerfDevice:
             result = cbladerf.bladerf_start_stream(c_stream, c_layout)
         raise_error('pybladerf_start_stream()', result)
 
-    def pybladerf_submit_stream_buffer(self, stream: pybladerf_stream, buffer: np.ndarray, timeout_ms: int) -> None:
+    def pybladerf_submit_stream_buffer(self, stream: pybladerf_stream, buffer: np.ndarray[Any, Any], timeout_ms: int) -> None:
         cdef cbladerf.bladerf_stream *c_stream = stream.get_ptr()
         cdef void *c_buffer = <void*> <uintptr_t> buffer.ctypes.data
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1754,7 +1760,7 @@ cdef class PyBladerfDevice:
             result = cbladerf.bladerf_submit_stream_buffer(c_stream, c_buffer, c_timeout_ms)
         raise_error('pybladerf_submit_stream_buffer()', result)
 
-    def pybladerf_submit_stream_buffer_nb(self, stream: pybladerf_stream, buffer: np.ndarray) -> None:
+    def pybladerf_submit_stream_buffer_nb(self, stream: pybladerf_stream, buffer: np.ndarray[Any, Any]) -> None:
         result = cbladerf.bladerf_submit_stream_buffer_nb(stream.get_ptr(), <void*> <uintptr_t> buffer.ctypes.data)
         raise_error('pybladerf_submit_stream_buffer_nb()', result)
 
@@ -1776,7 +1782,7 @@ cdef class PyBladerfDevice:
         result = cbladerf.bladerf_device_reset(self.__bladerf_device)
         raise_error('pybladerf_device_reset()', result)
 
-    def pybladerf_get_fw_log(self, filename: str = None) -> None:
+    def pybladerf_get_fw_log(self, filename: str | None = None) -> None:
         cdef char *c_filename = NULL
         if filename is not None:
             filename_bytes = filename.encode('utf-8')
@@ -2015,7 +2021,7 @@ cdef class PyBladerfDevice:
         raise RuntimeError(f'pybladerf_enable_tx_block_complete_callback() failed: Device not initialized!')
 
     # ---- python callbacks setters ---- #
-    def set_rx_callback(self, rx_callback_function) -> None:
+    def set_rx_callback(self, rx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int], int]) -> None:
         global global_callbacks
 
         if self.__bladerf_device is not NULL:
@@ -2024,7 +2030,7 @@ cdef class PyBladerfDevice:
 
         raise RuntimeError(f'set_rx_callback() failed: Device not initialized!')
 
-    def set_tx_callback(self, tx_callback_function) -> None:
+    def set_tx_callback(self, tx_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int, int], int]) -> None:
         global global_callbacks
 
         if self.__bladerf_device is not NULL:
@@ -2033,7 +2039,7 @@ cdef class PyBladerfDevice:
 
         raise RuntimeError(f'set_tx_callback() failed: Device not initialized!')
 
-    def set_tx_complete_callback(self, tx_complete_callback_function) -> None:
+    def set_tx_complete_callback(self, tx_complete_callback_function: Callable[[Self, pybladerf_stream, np.ndarray[Any, Any], int], None]) -> None:
         global global_callbacks
 
         if self.__bladerf_device is not NULL:
