@@ -1613,7 +1613,12 @@ cdef class PyBladerfDevice:
         return pybladerf_rx_mux(mux)
 
     def pybladerf_schedule_retune(self, channel: int, timestamp: int, frequency: int, quick_tune: pybladerf_quick_tune | None = None) -> None:
-        cdef cbladerf.bladerf_quick_tune *c_quick_tune_ptr = quick_tune.get_ptr() if quick_tune is not None else NULL
+        cdef cbladerf.bladerf_quick_tune *c_quick_tune_ptr = NULL
+        cdef pybladerf_quick_tune quick_tune_link
+        if isinstance(quick_tune, pybladerf_quick_tune):
+            quick_tune_link = quick_tune
+            c_quick_tune_ptr = <cbladerf.bladerf_quick_tune*> quick_tune_link.get_ptr()
+
         cdef uint64_t c_timestamp = <uint64_t> timestamp
         cdef uint64_t c_frequency = <uint64_t> frequency
         cdef int c_channel = <int> channel
@@ -1666,7 +1671,13 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_sync_config()', result)
 
     def pybladerf_sync_tx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
-        cdef cbladerf.bladerf_metadata *c_metadata_ptr =  metadata.get_ptr() if metadata is not None else NULL
+        cdef cbladerf.bladerf_metadata *c_metadata_ptr = NULL
+        cdef pybladerf_metadata metadata_link
+
+        if isinstance(metadata, pybladerf_metadata):
+            metadata_link = metadata
+            c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
         cdef void *c_samples_ptr = <void*> <uintptr_t> samples.ctypes.data
@@ -1677,7 +1688,13 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_sync_tx()', result)
 
     def pybladerf_sync_rx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
-        cdef cbladerf.bladerf_metadata *c_metadata_ptr = metadata.get_ptr() if metadata is not None else NULL
+        cdef cbladerf.bladerf_metadata *c_metadata_ptr = NULL
+        cdef pybladerf_metadata metadata_link
+
+        if isinstance(metadata, pybladerf_metadata):
+            metadata_link = metadata
+            c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
         cdef void *c_samples_ptr = <void*> <uintptr_t> samples.ctypes.data
