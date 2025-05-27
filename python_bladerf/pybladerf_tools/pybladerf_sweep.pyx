@@ -29,7 +29,7 @@ except ImportError:
     except ImportError:
         from numpy.fft import fft, fftshift  # type: ignore
 
-from libc.stdint cimport uint32_t, uint64_t
+from libc.stdint cimport uint32_t, uint64_t, uint8_t
 from python_bladerf import pybladerf
 from queue import Queue
 cimport numpy as cnp
@@ -186,13 +186,13 @@ cdef void process_data(object device):
     event_finished.set()
 
 
-def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int = None,
-                           gain: int = 20, bin_width: int = 100_000, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
-                           sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, serial_number: str = None,
-                           binary_output: bool = False, one_shot: bool = False, num_sweeps: int = None,
-                           filename: str = None, queue: object = None,
-                           print_to_console: bool = True,
-                           ):
+def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int | None = None,
+                    gain: int = 20, bin_width: int = 100_000, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
+                    sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, serial_number: str | None = None,
+                    binary_output: bool = False, one_shot: bool = False, num_sweeps: int | None = None,
+                    filename: str | None = None, queue: object | None = None,
+                    print_to_console: bool = True,
+                    ) -> None:
 
     global run_available, device_data
     init_signals()
@@ -317,16 +317,7 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
         device.pybladerf_close()
         raise RuntimeError('Reached maximum number of RX quick tune profiles. Please reduce the frequency range or increase the sample rate.')
 
-    shift_after = -1
-    if len(calculated_frequencies) % 8 < 4:
-        shift_after = len(calculated_frequencies) - len(calculated_frequencies) % 8
-
     for i, frequency in enumerate(calculated_frequencies):
-        if i == shift_after:
-            device.pybladerf_get_quick_tune(channel)
-            device.pybladerf_get_quick_tune(channel)
-            device.pybladerf_get_quick_tune(channel)
-
         device.pybladerf_set_frequency(channel, frequency + offset)
         current_device_data['frequencies'].append((frequency, device.pybladerf_get_quick_tune(channel)))
 
@@ -362,6 +353,7 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
     cdef uint32_t tune_steps = len(current_device_data['frequencies'])
     cdef double time_start = time.time()
     cdef double time_prev = time.time()
+    cdef uint8_t free_rffe_profile = 0
 
     cdef uint64_t schedule_timestamp = 0
     cdef uint64_t accepted_samples = 0
@@ -376,10 +368,13 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
     meta = pybladerf.pybladerf_metadata()
     schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
 
-    for i in range(4):
+    for i in range(8):
         start_from, quick_tune = current_device_data['frequencies'][tune_step]
+        quick_tune.rffe_profile = free_rffe_profile
+
         device.pybladerf_schedule_retune(channel, schedule_timestamp, start_from + offset, quick_tune)
         current_device_data['timestamps'].put((start_from, schedule_timestamp + await_time))
+        free_rffe_profile = (free_rffe_profile + 1) % 8
         schedule_timestamp += await_time + fft_size
         tune_step = (tune_step + 1) % tune_steps
 
@@ -396,8 +391,11 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
             accepted_samples += fft_size
 
             start_from, quick_tune = current_device_data['frequencies'][tune_step]
+            quick_tune.rffe_profile = free_rffe_profile
+
             device.pybladerf_schedule_retune(channel, schedule_timestamp, start_from + offset, quick_tune)
             current_device_data['timestamps'].put((start_from, schedule_timestamp + await_time))
+            free_rffe_profile = (free_rffe_profile + 1) % 8
             schedule_timestamp += await_time + fft_size
             tune_step = (tune_step + 1) % tune_steps
 
@@ -434,10 +432,13 @@ def pybladerf_sweep(frequencies: list = None, sample_rate: int = 61_000_000, bas
             time_str = datetime.datetime.now().strftime("%Y-%m-%d, %H:%M:%S.%f")
             schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
 
-            for i in range(4):
+            for i in range(8):
                 start_from, quick_tune = current_device_data['frequencies'][tune_step]
+                quick_tune.rffe_profile = free_rffe_profile
+
                 device.pybladerf_schedule_retune(channel, schedule_timestamp, start_from + offset, quick_tune)
                 current_device_data['timestamps'].put((start_from, schedule_timestamp + await_time))
+                free_rffe_profile = (free_rffe_profile + 1) % 8
                 schedule_timestamp += await_time + fft_size
                 tune_step = (tune_step + 1) % tune_steps
 
