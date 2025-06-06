@@ -20,9 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# distutils: language = c++
 # cython: language_level=3str
 from python_bladerf import pybladerf
-from libc.stdint cimport uint32_t, uint64_t
+from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
+from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
+from libc.time cimport timespec, timespec_get
+from python_bladerf import pybladerf
+from libcpp cimport bool as c_bool
+from libcpp.atomic cimport atomic
 cimport numpy as cnp
 import numpy as np
 import threading
@@ -34,8 +40,12 @@ import os
 
 cnp.import_array()
 
-FREQ_MIN_HZ = 70_000_000
-FREQ_MAX_HZ = 6_000_000_000
+FREQ_RX_MIN_MHZ = 70  # MHz
+FREQ_TX_MIN_MHZ = 47  # MHz
+FREQ_MAX_MHZ = 6_000  # MHZ
+FREQ_RX_MIN_HZ = int(FREQ_RX_MIN_MHZ * 1e6)  # Hz
+FREQ_TX_MIN_HZ = int(FREQ_TX_MIN_MHZ * 1e6)  # Hz
+FREQ_MAX_HZ = int(FREQ_MAX_MHZ * 1e6)  # Hz
 
 SAMPLES_TO_XFER_MAX = 9_223_372_036_854_775_808
 
@@ -45,75 +55,126 @@ MAX_SAMPLE_RATE = 61_440_000
 MIN_BASEBAND_FILTER_BANDWIDTHS = 200_000  # MHz
 MAX_BASEBAND_FILTER_BANDWIDTHS = 56_000_000  # MHz
 
-DEFAULT_FREQUENCY = 900_000_000
+DEFAULT_FREQUENCY = 900_000_000  # 900 MHz
 
-cdef dict run_available = {}
-cdef dict device_data = {}
+cdef atomic[uint8_t] working_sdrs[16]
+cdef dict sdr_ids = {}
+
+cdef struct TransferStatus:
+    atomic[uint64_t] byte_count
+    atomic[uint64_t] stream_power
+    c_bool tx_complete
+
+cdef double get_timestamp() noexcept nogil:
+    cdef timespec ts
+
+    if timespec_get(&ts, 1) != 0:
+        return <double>ts.tv_sec + <double>ts.tv_nsec / 1000000000.0
+    else:
+        with gil:
+            return time.time()
 
 
-def sigint_callback_handler(sig, frame):
-    global run_available
-    for device in run_available.keys():
-        run_available[device] = False
+def sigint_callback_handler(sig, frame, sdr_id):
+    global working_sdrs
+    working_sdrs[sdr_id].store(0)
 
 
-def init_signals():
-    try:
-        signal.signal(signal.SIGINT, sigint_callback_handler)
-        signal.signal(signal.SIGILL, sigint_callback_handler)
-        signal.signal(signal.SIGTERM, sigint_callback_handler)
-        signal.signal(signal.SIGHUP, sigint_callback_handler)
-        signal.signal(signal.SIGABRT, sigint_callback_handler)
-    except Exception:
-        pass
+def init_signals() -> int:
+    global working_sdrs
+
+    sdr_id = -1
+    for i in range(16):
+        if working_sdrs[i].load() == 0:
+            sdr_id = i
+            break
+
+    if sdr_id >= 0:
+        try:
+            signal.signal(signal.SIGINT, lambda sig, frame: sigint_callback_handler(sig, frame, sdr_id))
+            signal.signal(signal.SIGILL, lambda sig, frame: sigint_callback_handler(sig, frame, sdr_id))
+            signal.signal(signal.SIGTERM, lambda sig, frame: sigint_callback_handler(sig, frame, sdr_id))
+            signal.signal(signal.SIGABRT, lambda sig, frame: sigint_callback_handler(sig, frame, sdr_id))
+        except Exception as ex:
+            sys.stderr.write(f'Error: {ex}\n')
+
+    return sdr_id
+
+
+def stop_all() -> None:
+    global working_sdrs
+    for i in range(16):
+        working_sdrs[i].store(0)
+
+
+def stop_sdr(serialno: str) -> None:
+    global sdr_ids, working_sdrs
+    if serialno in sdr_ids:
+        working_sdrs[sdr_ids[serialno]].store(0)
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef void rx_process(object device):
-    global run_available, device_data
+cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
+                      uint8_t device_id,
+                      uintptr_t transfer_status_ptr,
+                      uint8_t channel,
+                      uint8_t oversample,
+                      object notify_finished,
+                      object rx_buffer,
+                      object file,
+                      int num_samples):
 
-    cdef dict current_device_data = device_data[device.serialno]
+    cdef TransferStatus* transfer_status = <TransferStatus*> transfer_status_ptr
 
-    cdef uint32_t to_read
+    cdef uint64_t to_read
     cdef cnp.ndarray accepted_data
-    cdef uint32_t samples_per_transfer = int(os.environ.get('pybladerf_transfer_samples_per_transfer', 65536))
-    cdef uint32_t divider = current_device_data['divider']
-    cdef object dtype = np.int8 if current_device_data['oversample'] else np.int16
-    cdef cnp.ndarray buffer = np.empty(samples_per_transfer * 2, dtype=dtype)
 
-    device.pybladerf_enable_module(current_device_data['channel'], True)
-    while run_available[device.serialno]:
+    cdef uint64_t samples_per_transfer = int(os.environ.get('pybladerf_transfer_samples_per_transfer', 65536))
+    cdef uint16_t divider = 128 if oversample else 2048
+    cdef uint8_t bytes_per_sample = 2 if oversample else 4
+    cdef cnp.ndarray buffer = np.empty(samples_per_transfer * 2, dtype=np.int8 if oversample else np.int16)
+
+    device.pybladerf_enable_module(channel, True)
+    while working_sdrs[device_id].load():
         device.pybladerf_sync_rx(buffer, samples_per_transfer, None, 0)
 
-        current_device_data['byte_count'] += samples_per_transfer * current_device_data['bytes_per_sample']
-        current_device_data['stream_power'] += np.sum(buffer[:samples_per_transfer * 2].astype(np.int32) ** 2)
+        transfer_status.byte_count.fetch_add(samples_per_transfer * bytes_per_sample)
+        transfer_status.stream_power.fetch_add(np.sum(buffer[:samples_per_transfer * 2].astype(np.int32) ** 2))
         to_read = samples_per_transfer
 
-        if current_device_data['num_samples']:
-            if (to_read > current_device_data['num_samples']):
-                to_read = current_device_data['num_samples']
-            current_device_data['num_samples'] -= to_read
+        if num_samples:
+            if (to_read > num_samples):
+                to_read = num_samples
+            num_samples -= to_read
 
         accepted_data = (buffer[:to_read * 2:2] / divider + 1j * buffer[1:to_read * 2:2] / divider).astype(np.complex64)
 
-        if current_device_data['rx_buffer'] is not None:
-            current_device_data['rx_buffer'].append(accepted_data)
+        if rx_buffer is not None:
+            rx_buffer.append(accepted_data)
         else:
-            accepted_data.tofile(current_device_data['rx_file'])
+            accepted_data.tofile(file)
 
-        if current_device_data['num_samples'] == 0:
-            run_available[device.serialno] = False
+        if num_samples == 0:
+            working_sdrs[device_id].store(0)
 
-    device_data[device.serialno]['event'].set()
+    notify_finished.set()
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef void tx_process(object device):
-    global run_available, device_data
+cpdef void tx_process(c_pybladerf.PyBladerfDevice device,
+                      uint8_t device_id,
+                      uintptr_t transfer_status_ptr,
+                      uint8_t channel,
+                      uint8_t oversample,
+                      uint8_t repeat_tx,
+                      object notify_finished,
+                      object tx_buffer,
+                      object file,
+                      int num_samples):
 
-    cdef dict current_device_data = device_data[device.serialno]
+    cdef TransferStatus* transfer_status = <TransferStatus*> transfer_status_ptr
 
     cdef bytes raw_data
     cdef uint64_t writed = 0
@@ -121,30 +182,31 @@ cpdef void tx_process(object device):
     cdef uint64_t rewrited = 0
     cdef cnp.ndarray sent_data
     cdef cnp.ndarray scaled_data
+    cdef uint8_t bytes_per_sample = 2 if oversample else 4
     cdef uint32_t samples_per_transfer = int(os.environ.get('pybladerf_transfer_samples_per_transfer', 65536))
-    cdef uint32_t divider = current_device_data['divider']
-    cdef object dtype = np.int8 if current_device_data['oversample'] else np.int16
-    cdef cnp.ndarray buffer = np.empty(samples_per_transfer * 2, dtype=np.int8 if current_device_data['oversample'] else np.int16)
+    cdef uint16_t divider = 128 if oversample else 2048
+    cdef object dtype = np.int8 if oversample else np.int16
+    cdef cnp.ndarray buffer = np.empty(samples_per_transfer * 2, dtype=dtype)
 
-    device.pybladerf_enable_module(current_device_data['channel'], True)
-    while run_available[device.serialno]:
+    device.pybladerf_enable_module(channel, True)
+    while working_sdrs[device_id].load():
         to_write = samples_per_transfer
 
-        if current_device_data['num_samples']:
-            if (to_write > current_device_data['num_samples']):
-                to_write = current_device_data['num_samples']
-            current_device_data['num_samples'] -= to_write
+        if num_samples:
+            if (to_write > num_samples):
+                to_write = num_samples
+            num_samples -= to_write
 
-        if current_device_data['tx_buffer'] is not None:
+        if tx_buffer is not None:
 
-            sent_data = current_device_data['tx_buffer'].get_chunk(to_write, ring=current_device_data['repeat_tx'], wait=True, timeout=0.5)
+            sent_data = tx_buffer.get_chunk(to_write, ring=repeat_tx, wait=True, timeout=0.5)
 
             if len(sent_data):
                 writed = len(sent_data)
             else:
                 # buffer is empty or finished
-                current_device_data['tx_complete'] = True
-                run_available[device.serialno] = False
+                transfer_status.tx_complete = True
+                working_sdrs[device_id].store(0)
                 break
 
             scaled_data = (sent_data.view(np.float32) * divider).astype(dtype)
@@ -152,21 +214,21 @@ cpdef void tx_process(object device):
             buffer[1:writed * 2:2] = scaled_data[1::2]
 
             device.pybladerf_sync_tx(buffer, writed, None, 0)
-            current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-            current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
+            transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+            transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
 
             # limit samples
-            if current_device_data['num_samples'] == 0:
-                current_device_data['tx_complete'] = True
-                run_available[device.serialno] = False
+            if num_samples == 0:
+                transfer_status.tx_complete = True
+                working_sdrs[device_id].store(0)
 
         else:
-            raw_data = current_device_data['tx_file'].read(to_write * 8)
+            raw_data = file.read(to_write * 8)
             if len(raw_data):
                 writed = len(raw_data) // 8
-            elif current_device_data['tx_file'].tell() < 1:
+            elif file.tell() < 1:
                 # file is empty
-                run_available[device.serialno] = False
+                working_sdrs[device_id].store(0)
                 break
             else:
                 writed = 0
@@ -178,42 +240,42 @@ cpdef void tx_process(object device):
             buffer[1:writed * 2:2] = scaled_data[1::2]
 
             # limit samples
-            if current_device_data['num_samples'] == 0:
+            if num_samples == 0:
                 device.pybladerf_sync_tx(buffer, writed, None, 0)
-                current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-                current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
-                current_device_data['tx_complete'] = True
-                run_available[device.serialno] = False
+                transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+                transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
+                transfer_status.tx_complete = True
+                working_sdrs[device_id].store(0)
                 continue
 
             # buffer is full
             if to_write == writed:
                 device.pybladerf_sync_tx(buffer, writed, None, 0)
-                current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-                current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
+                transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+                transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
                 continue
 
             # file is finished
-            if not current_device_data['repeat_tx']:
+            if not repeat_tx:
                 device.pybladerf_sync_tx(buffer, writed, None, 0)
-                current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-                current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
-                current_device_data['tx_complete'] = True
-                run_available[device.serialno] = False
+                transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+                transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
+                transfer_status.tx_complete = True
+                working_sdrs[device_id].store(0)
                 continue
 
             # repeat file
             while writed < to_write:
-                current_device_data['tx_file'].seek(0)
-                raw_data = current_device_data['tx_file'].read((to_write - writed) * 8)
+                file.seek(0)
+                raw_data = file.read((to_write - writed) * 8)
                 if len(raw_data):
                     rewrited = len(raw_data) // 8
                 else:
                     device.pybladerf_sync_tx(buffer, writed, None, 0)
-                    current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-                    current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
-                    current_device_data['tx_complete'] = True
-                    run_available[device.serialno] = False
+                    transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+                    transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
+                    transfer_status.tx_complete = True
+                    working_sdrs[device_id].store(0)
                     continue
 
                 sent_data = np.frombuffer(raw_data, dtype=np.complex64)
@@ -224,11 +286,11 @@ cpdef void tx_process(object device):
                 writed += rewrited
 
             device.pybladerf_sync_tx(buffer, writed, None, 0)
-            current_device_data['byte_count'] += writed * current_device_data['bytes_per_sample']
-            current_device_data['stream_power'] += np.sum(buffer[:writed * 2].astype(np.int32) ** 2)
+            transfer_status.byte_count.fetch_add(writed * bytes_per_sample)
+            transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
             continue
 
-    device_data[device.serialno]['event'].set()
+    notify_finished.set()
 
 
 def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int | None = None,
@@ -237,16 +299,21 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
                        rx_filename: str | None = None, tx_filename: str | None = None, rx_buffer: object | None = None, tx_buffer: object | None = None,
                        print_to_console: bool = True) -> None:
 
-    global run_available, device_data
+    global working_sdrs, sdr_ids
 
-    init_signals()
+    cdef uint8_t device_id = init_signals()
+    cdef c_pybladerf.PyBladerfDevice device
+    cdef uint8_t formated_channel
+    cdef int i
 
     if serial_number is None:
         device = pybladerf.pybladerf_open()
     else:
         device = pybladerf.pybladerf_open_by_serial(serial_number)
 
-    run_available[device.serialno] = True
+    working_sdrs[device_id].store(1)
+    sdr_ids[device.serialno] = device_id
+
     device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
 
     if oversample:
@@ -265,33 +332,15 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
         raise RuntimeError('BladeRF transfer cannot receive and send IQ samples at the same time.')
 
     elif rx_buffer is not None or rx_filename is not None:
-        channel = pybladerf.PYBLADERF_CHANNEL_RX(channel)
+        formated_channel = pybladerf.PYBLADERF_CHANNEL_RX(channel)
     elif tx_buffer is not None or tx_filename is not None:
-        channel = pybladerf.PYBLADERF_CHANNEL_TX(channel)
-
-    cdef uint32_t max_scale = 127 if oversample else 2047
-    cdef dict current_device_data = {
-        'num_samples': num_samples,
-        'divider': 128 if oversample else 2048,
-        'oversample': oversample,
-        'bytes_per_sample': 2 if oversample else 4,
-        'event': threading.Event(),
-        'repeat_tx': repeat_tx,
-        'tx_complete': False,
-        'stream_power': 0,
-        'byte_count': 0,
-        'channel': channel,
-
-        'rx_file': open(rx_filename, 'wb') if rx_filename not in ('-', None) else (sys.stdout.buffer if rx_filename == '-' else None),
-        'tx_file': open(tx_filename, 'rb') if tx_filename not in ('-', None) else (sys.stdin.buffer if tx_filename == '-' else None),
-        'rx_buffer': rx_buffer,
-        'tx_buffer': tx_buffer
-    }
-    device_data[device.serialno] = current_device_data
+        formated_channel = pybladerf.PYBLADERF_CHANNEL_TX(channel)
 
     if frequency is not None:
-        if frequency > FREQ_MAX_HZ or frequency < FREQ_MIN_HZ:
-            raise RuntimeError(f'frequency must be between {FREQ_MIN_HZ} and {FREQ_MAX_HZ}')
+        if (rx_buffer is not None or rx_filename is not None) and frequency > FREQ_MAX_HZ or frequency < FREQ_RX_MIN_HZ:
+            raise RuntimeError(f'frequency for RX must be between {FREQ_RX_MIN_HZ} and {FREQ_MAX_HZ}')
+        if (tx_buffer is not None or tx_filename is not None) and frequency > FREQ_MAX_HZ or frequency < FREQ_TX_MIN_HZ:
+            raise RuntimeError(f'frequency for RX must be between {FREQ_TX_MIN_HZ} and {FREQ_MAX_HZ}')
     else:
         frequency = DEFAULT_FREQUENCY
 
@@ -299,21 +348,19 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
         if print_to_console:
             sys.stderr.write(f'call pybladerf_enable_feature({pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE}, True)\n')
         device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, True)
-    else:
-        device.pybladerf_enable_feature(pybladerf.pybladerf_feature.PYBLADERF_FEATURE_OVERSAMPLE, False)
 
     if print_to_console:
         sys.stderr.write(f'call pybladerf_set_sample_rate({sample_rate / 1e6 :.3f} MHz)\n')
-    device.pybladerf_set_sample_rate(channel, sample_rate)
+    device.pybladerf_set_sample_rate(formated_channel, sample_rate)
 
     if not oversample:
         if print_to_console:
-            sys.stderr.write(f'call pybladerf_set_bandwidth({channel}, {baseband_filter_bandwidth / 1e6 :.3f} MHz)\n')
-        device.pybladerf_set_bandwidth(channel, baseband_filter_bandwidth)
+            sys.stderr.write(f'call pybladerf_set_bandwidth({formated_channel}, {baseband_filter_bandwidth / 1e6 :.3f} MHz)\n')
+        device.pybladerf_set_bandwidth(formated_channel, baseband_filter_bandwidth)
 
     if print_to_console:
-        sys.stderr.write(f'call pybladerf_trigger_init({channel}, {pybladerf.pybladerf_trigger_signal.PYBLADERF_TRIGGER_MINI_EXP_1})\n')
-    trigger = device.pybladerf_trigger_init(channel, pybladerf.pybladerf_trigger_signal.PYBLADERF_TRIGGER_MINI_EXP_1)
+        sys.stderr.write(f'call pybladerf_trigger_init({formated_channel}, {pybladerf.pybladerf_trigger_signal.PYBLADERF_TRIGGER_MINI_EXP_1})\n')
+    trigger = device.pybladerf_trigger_init(formated_channel, pybladerf.pybladerf_trigger_signal.PYBLADERF_TRIGGER_MINI_EXP_1)
 
     if synchronize:
         if print_to_console:
@@ -329,30 +376,45 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
     device.pybladerf_trigger_arm(trigger, True)
 
     if print_to_console:
-        sys.stderr.write(f'call pybladerf_set_frequency({channel}, {frequency} Hz / {frequency / 1e6 :.3f} MHz)\n')
-    device.pybladerf_set_frequency(channel, frequency)
+        sys.stderr.write(f'call pybladerf_set_frequency({formated_channel}, {frequency} Hz / {frequency / 1e6 :.3f} MHz)\n')
+    device.pybladerf_set_frequency(formated_channel, frequency)
 
     if print_to_console:
-        sys.stderr.write(f'call pybladerf_set_gain_mode({channel}, {pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC})\n')
-    device.pybladerf_set_gain_mode(channel, pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC)
-    device.pybladerf_set_gain(channel, gain)
+        sys.stderr.write(f'call pybladerf_set_gain_mode({formated_channel}, {pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC})\n')
+    device.pybladerf_set_gain_mode(formated_channel, pybladerf.pybladerf_gain_mode.PYBLADERF_GAIN_MGC)
+    device.pybladerf_set_gain(formated_channel, gain)
 
     if antenna_enable:
         if print_to_console:
-            sys.stderr.write(f'call pybladerf_set_bias_tee({channel}, True)\n')
-        device.pybladerf_set_bias_tee(channel, True)
+            sys.stderr.write(f'call pybladerf_set_bias_tee({formated_channel}, True)\n')
+        device.pybladerf_set_bias_tee(formated_channel, True)
 
+    rx_file = open(rx_filename, 'wb') if rx_filename not in ('-', None) else (sys.stdout.buffer if rx_filename == '-' else None)
+    tx_file = open(tx_filename, 'rb') if tx_filename not in ('-', None) else (sys.stdin.buffer if tx_filename == '-' else None)
+    notify_finished = threading.Event()
+
+    cdef TransferStatus transfer_status
     if rx_buffer is not None or rx_filename is not None:
         device.pybladerf_sync_config(
             layout=pybladerf.pybladerf_channel_layout.PYBLADERF_RX_X1,
             data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11,
             num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 4096)),
             buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 8192)),
-            num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 32)),
+            num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 64)),
             stream_timeout=0,
         )
 
-        processing_thread = threading.Thread(target=rx_process, args=(device, ), daemon=True)
+        processing_thread = threading.Thread(target=rx_process, args=(
+            device,
+            device_id,
+            <uintptr_t> &transfer_status,
+            formated_channel,
+            1 if oversample else 0,
+            notify_finished,
+            rx_buffer,
+            rx_file,
+            num_samples if num_samples else -1
+        ), daemon=True)
         processing_thread.start()
 
     elif tx_buffer is not None or tx_filename is not None:
@@ -361,11 +423,22 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
             data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11,
             num_buffers=int(os.environ.get('pybladerf_transfer_num_buffers', 4096)),
             buffer_size=int(os.environ.get('pybladerf_transfer_buffer_size', 8192)),
-            num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 32)),
+            num_transfers=int(os.environ.get('pybladerf_transfer_num_transfers', 64)),
             stream_timeout=0,
         )
 
-        processing_thread = threading.Thread(target=tx_process, args=(device, ), daemon=True)
+        processing_thread = threading.Thread(target=tx_process, args=(
+            device,
+            device_id,
+            <uintptr_t> &transfer_status,
+            formated_channel,
+            1 if oversample else 0,
+            1 if repeat_tx else 0,
+            notify_finished,
+            tx_buffer,
+            tx_file,
+            num_samples if num_samples else -1
+        ), daemon=True)
         processing_thread.start()
 
     if not synchronize:
@@ -374,27 +447,34 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
     if num_samples and print_to_console:
         sys.stderr.write(f'samples_to_xfer {num_samples}/{num_samples / (5e5 if oversample else 25e4):.3f} MB\n')
 
-    cdef double time_start = time.time()
-    cdef double time_prev = time.time()
+    cdef double time_start = get_timestamp()
+    cdef double time_prev = get_timestamp()
     cdef double time_difference = 0
     cdef uint64_t stream_power = 0
     cdef double dB_full_scale = 0
     cdef uint64_t byte_count = 0
-    while run_available[device.serialno]:
+    cdef double time_now = 0
+
+    cdef uint16_t max_scale = 127 if oversample else 2047
+
+    while working_sdrs[device_id].load():
         time.sleep(0.05)
-        time_now = time.time()
+        time_now = get_timestamp()
         time_difference = time_now - time_prev
         if time_difference >= 1.0:
             if print_to_console:
-                byte_count, stream_power = current_device_data['byte_count'], current_device_data['stream_power']
-                current_device_data['stream_power'], current_device_data['byte_count'] = 0, 0
+                byte_count = transfer_status.byte_count.load()
+                stream_power = transfer_status.stream_power.load()
+
+                transfer_status.byte_count.store(0)
+                transfer_status.stream_power.store(0)
 
                 if byte_count == 0 and synchronize:
-                    sys.stderr.write('Waiting for trigger...\n')
-                elif byte_count != 0 and not current_device_data['tx_complete']:
+                    sys.stderr.write("Waiting for trigger...\n")
+                elif byte_count != 0 and not transfer_status.tx_complete:
                     dB_full_scale = 10 * np.log10(stream_power / ((byte_count / 2) * max_scale ** 2))
                     sys.stderr.write(f'{(byte_count / time_difference) / 1e6:.1f} MB/second, average power {dB_full_scale:.1f} dBfs\n')
-                elif byte_count == 0 and not synchronize and not current_device_data['tx_complete']:
+                elif byte_count == 0 and not synchronize and not transfer_status.tx_complete:
                     if print_to_console:
                         sys.stderr.write('Couldn\'t transfer any data for one second.\n')
                     break
@@ -403,32 +483,35 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
 
     time_now = time.time()
     if print_to_console:
-        if not run_available[device.serialno]:
+        if not working_sdrs[device_id].load():
             sys.stderr.write('\nExiting...\n')
         else:
             sys.stderr.write('\nExiting... [ pybladerf streaming stopped ]\n')
 
-    run_available[device.serialno] = False
-    current_device_data['event'].wait()
+    working_sdrs[device_id].store(0)
+    sdr_ids.pop(device.serialno, None)
+    notify_finished.wait()
 
     trigger.role = pybladerf.pybladerf_trigger_role.PYBLADERF_TRIGGER_ROLE_DISABLED
     device.pybladerf_trigger_arm(trigger, False)
 
     if print_to_console:
         sys.stderr.write(f'Total time: {time_now - time_start:.5f} seconds\n')
-    time.sleep(.5)
 
     if rx_filename not in ('-', None):
-        current_device_data['rx_file'].close()
+        rx_file.close()
 
     if tx_filename not in ('-', None):
-        current_device_data['tx_file'].close()
+        tx_file.close()
 
-    device_data.pop(device.serialno, None)
-    run_available.pop(device.serialno, None)
+    if antenna_enable:
+        try:
+            device.pybladerf_set_bias_tee(formated_channel, False)
+        except Exception as ex:
+                sys.stderr.write(f'{ex}\n')
 
     try:
-        device.pybladerf_enable_module(channel, False)
+        device.pybladerf_enable_module(formated_channel, False)
     except Exception as ex:
             sys.stderr.write(f'{ex}\n')
     try:
