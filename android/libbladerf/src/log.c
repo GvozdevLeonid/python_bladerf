@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
  #ifdef LOGGING_ENABLED
  #include <log.h>
  #include <android/log.h>
