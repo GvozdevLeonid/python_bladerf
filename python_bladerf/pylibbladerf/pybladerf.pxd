@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# distutils: language = c++
 # cython: language_level=3str
+from libcpp cimport bool as c_bool
 from . cimport cbladerf
 
 cdef struct pybladerf_async_data:
@@ -32,7 +34,7 @@ cdef struct pybladerf_async_data:
     int packages_per_buffer
     int samples_per_package
 
-    bint tx_complete
+    c_bool tx_complete
 
 # ---- STRUCT ---- #
 cdef class pybladerf_devinfo:
@@ -79,11 +81,11 @@ cdef class pybladerf_rf_switch_config:
 
 # ---- READONLY STRUCT ---- #
 cdef class pybladerf_range:
-    cdef cbladerf.bladerf_range *__bladerf_range
+    cdef const cbladerf.bladerf_range *__bladerf_range
 
-    cdef cbladerf.bladerf_range *get_ptr(self)
+    cdef const cbladerf.bladerf_range *get_ptr(self)
 
-    cdef cbladerf.bladerf_range **get_double_ptr(self)
+    cdef const cbladerf.bladerf_range **get_double_ptr(self)
 
 cdef class pybladerf_stream:
     cdef cbladerf.bladerf_stream *__bladerf_stream

@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# distutils: language = c++
 # cython: language_level=3str
 from python_bladerf import __version__
 from libc.stdint cimport uint8_t, int16_t, uint16_t, int32_t, uint32_t, uint64_t, uintptr_t
@@ -27,6 +28,7 @@ from libc.string cimport memcpy, memset, strncpy
 from cpython cimport Py_INCREF, Py_DECREF
 from typing import Any, Callable, Self
 from libc.stdlib cimport malloc, free
+from libcpp cimport bool as c_bool
 from enum import IntEnum
 from ctypes import c_int
 from . cimport cbladerf
@@ -448,7 +450,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return pybladerf_backend(self.__bladerf_devinfo[0].backend)
 
-        def __set__(self, value: pybladerf_backend) -> None:
+        def __set__(self, value: pybladerf_backend | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 self.__bladerf_devinfo[0].backend = value
 
@@ -457,7 +459,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].serial.decode('utf-8')
 
-        def __set__(self, value: str) -> None:
+        def __set__(self, value: str | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 strncpy(self.__bladerf_devinfo[0].serial, value.encode('utf-8'), cbladerf.BLADERF_SERIAL_LENGTH - 1)
 
@@ -466,7 +468,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].usb_bus
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 self.__bladerf_devinfo[0].usb_bus = <uint8_t> value
 
@@ -475,7 +477,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].usb_addr
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 self.__bladerf_devinfo[0].usb_addr = <uint8_t> value
 
@@ -484,7 +486,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].instance
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 self.__bladerf_devinfo[0].instance = <unsigned int> value
 
@@ -493,7 +495,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].manufacturer.decode('utf-8')
 
-        def __set__(self, value: str) -> None:
+        def __set__(self, value: str | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 strncpy(self.__bladerf_devinfo[0].manufacturer, value.encode('utf-8'), cbladerf.BLADERF_DESCRIPTION_LENGTH - 1)
 
@@ -502,7 +504,7 @@ cdef class pybladerf_devinfo:
             if self.__bladerf_devinfo != NULL:
                 return self.__bladerf_devinfo[0].product.decode('utf-8')
 
-        def __set__(self, value: str) -> None:
+        def __set__(self, value: str | None) -> None:
             if value is not None and self.__bladerf_devinfo != NULL:
                 strncpy(self.__bladerf_devinfo[0].product, value.encode('utf-8'), cbladerf.BLADERF_DESCRIPTION_LENGTH - 1)
 
@@ -541,7 +543,7 @@ cdef class pybladerf_version:
             if self.__bladerf_version != NULL:
                 return self.__bladerf_version[0].major
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_version != NULL:
                 self.__bladerf_version[0].major = <uint16_t> value
 
@@ -550,7 +552,7 @@ cdef class pybladerf_version:
             if self.__bladerf_version != NULL:
                 return self.__bladerf_version[0].minor
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_version != NULL:
                 self.__bladerf_version[0].minor = <uint16_t> value
 
@@ -559,7 +561,7 @@ cdef class pybladerf_version:
             if self.__bladerf_version != NULL:
                 return self.__bladerf_version[0].patch
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_version != NULL:
                 self.__bladerf_version[0].patch = <uint16_t> value
 
@@ -568,7 +570,7 @@ cdef class pybladerf_version:
             if self.__bladerf_version != NULL:
                 return self.__bladerf_version[0].describe.decode('utf-8')
 
-        def __set__(self, value: str) -> None:
+        def __set__(self, value: str | None) -> None:
             if value is not None and self.__bladerf_version != NULL:
                 encoded_value = value.encode('utf-8')
                 self.__bladerf_version[0].describe = encoded_value
@@ -608,7 +610,7 @@ cdef class pybladerf_trigger:
             if self.__bladerf_trigger != NULL:
                 return self.__bladerf_trigger[0].channel
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_trigger != NULL:
                 self.__bladerf_trigger[0].channel = value
 
@@ -617,7 +619,7 @@ cdef class pybladerf_trigger:
             if self.__bladerf_trigger != NULL:
                 return pybladerf_trigger_role(self.__bladerf_trigger[0].role)
 
-        def __set__(self, value: pybladerf_trigger_role) -> None:
+        def __set__(self, value: pybladerf_trigger_role | None) -> None:
             if value is not None and self.__bladerf_trigger != NULL:
                 self.__bladerf_trigger[0].role = value
 
@@ -626,7 +628,7 @@ cdef class pybladerf_trigger:
             if self.__bladerf_trigger != NULL:
                 return pybladerf_trigger_signal(self.__bladerf_trigger[0].signal)
 
-        def __set__(self, value: pybladerf_trigger_signal) -> None:
+        def __set__(self, value: pybladerf_trigger_signal | None) -> None:
             if value is not None and self.__bladerf_trigger != NULL:
                 self.__bladerf_trigger[0].signal = value
 
@@ -635,7 +637,7 @@ cdef class pybladerf_trigger:
             if self.__bladerf_trigger != NULL:
                 return self.__bladerf_trigger[0].options
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_trigger != NULL:
                 self.__bladerf_trigger[0].options = <uint64_t> value
 
@@ -681,7 +683,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].freqsel
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].freqsel = <uint8_t> value
 
@@ -690,7 +692,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].vcocap
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].vcocap = <uint8_t> value
 
@@ -699,7 +701,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].nint
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].nint = <uint16_t> value
 
@@ -708,7 +710,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].nfrac
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].nfrac = <uint32_t> value
 
@@ -717,7 +719,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].flags
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].flags = <uint8_t> value
 
@@ -726,7 +728,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].xb_gpio
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].xb_gpio = <uint8_t> value
 
@@ -735,7 +737,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].nios_profile
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].nios_profile = <uint16_t> value
 
@@ -744,7 +746,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].rffe_profile
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].rffe_profile = <uint8_t> value
 
@@ -753,7 +755,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].port = <uint8_t> value
 
@@ -762,7 +764,7 @@ cdef class pybladerf_quick_tune:
             if self.__bladerf_quick_tune != NULL:
                 return self.__bladerf_quick_tune[0].spdt
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_quick_tune != NULL:
                 self.__bladerf_quick_tune[0].spdt = <uint8_t> value
 
@@ -801,7 +803,7 @@ cdef class pybladerf_metadata:
             if self.__bladerf_metadata != NULL:
                 return self.__bladerf_metadata[0].timestamp
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_metadata != NULL:
                 self.__bladerf_metadata[0].timestamp = <uint64_t> value
 
@@ -810,7 +812,7 @@ cdef class pybladerf_metadata:
             if self.__bladerf_metadata != NULL:
                 return self.__bladerf_metadata[0].flags
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_metadata != NULL:
                     self.__bladerf_metadata[0].flags = <uint32_t> value
 
@@ -819,7 +821,7 @@ cdef class pybladerf_metadata:
             if self.__bladerf_metadata != NULL:
                 return self.__bladerf_metadata[0].status
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_metadata != NULL:
                 self.__bladerf_metadata[0].status = <uint32_t> value
 
@@ -828,7 +830,7 @@ cdef class pybladerf_metadata:
             if self.__bladerf_metadata != NULL:
                 return self.__bladerf_metadata[0].actual_count
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_metadata != NULL:
                 self.__bladerf_metadata[0].actual_count = <unsigned int> value
 
@@ -870,7 +872,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].tx1_rfic_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].tx1_rfic_port = <uint32_t> value
 
@@ -879,7 +881,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].tx1_spdt_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].tx1_spdt_port = <uint32_t> value
 
@@ -888,7 +890,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].tx2_rfic_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].tx2_rfic_port = <uint32_t> value
 
@@ -897,7 +899,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].tx2_spdt_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].tx2_spdt_port = <uint32_t> value
 
@@ -906,7 +908,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].rx1_rfic_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].rx1_rfic_port = <uint32_t> value
 
@@ -915,7 +917,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].rx1_spdt_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].rx1_spdt_port = <uint32_t> value
 
@@ -924,7 +926,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].rx2_rfic_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].rx2_rfic_port = <uint32_t> value
 
@@ -933,7 +935,7 @@ cdef class pybladerf_rf_switch_config:
             if self.__bladerf_rf_switch_config != NULL:
                 return self.__bladerf_rf_switch_config[0].rx2_spdt_port
 
-        def __set__(self, value: int) -> None:
+        def __set__(self, value: int | None) -> None:
             if value is not None and self.__bladerf_rf_switch_config != NULL:
                 self.__bladerf_rf_switch_config[0].rx2_spdt_port = <uint32_t> value
 
@@ -971,10 +973,10 @@ cdef class pybladerf_range:
             if self.__bladerf_range != NULL:
                 return self.__bladerf_range[0].scale
 
-    cdef cbladerf.bladerf_range *get_ptr(self):
+    cdef const cbladerf.bladerf_range *get_ptr(self):
         return self.__bladerf_range
 
-    cdef cbladerf.bladerf_range **get_double_ptr(self):
+    cdef const cbladerf.bladerf_range **get_double_ptr(self):
         return &self.__bladerf_range
 
 cdef class pybladerf_stream:
@@ -1123,10 +1125,6 @@ ELSE:
         property products:
             def __get__(self) -> list[str]:
                 return [self.__bladerf_device_list[i].product.decode('utf-8') for i in range(self.device_count)]
-
-cdef struct pybladerf_async_data:
-    pass
-
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -1397,7 +1395,7 @@ cdef class PyBladerfDevice:
 
     def pybladerf_get_flash_size(self) -> tuple[int, bool]:
         cdef uint32_t size
-        cdef bint is_guess
+        cdef c_bool is_guess
         result = cbladerf.bladerf_get_flash_size(self.__bladerf_device, &size, &is_guess)
         raise_error('pybladerf_get_flash_size()', result)
         return size, is_guess
@@ -1483,7 +1481,7 @@ cdef class PyBladerfDevice:
         return gain_stage_range
 
     def pybladerf_get_gain_stages(self, channel: int) -> list[str]:
-        cdef char *stages_ptr[16]
+        cdef const char *stages_ptr[16]
         result = cbladerf.bladerf_get_gain_stages(self.__bladerf_device, channel, stages_ptr, 16)
         raise_error('pybladerf_get_gain_stages()', result)
         return [stages_ptr[i].decode('utf-8') for i in range(result)]
@@ -1563,7 +1561,7 @@ cdef class PyBladerfDevice:
         return frequency_range
 
     def pybladerf_get_loopback_modes(self) -> list[pybladerf_loopback]:
-        cdef cbladerf.bladerf_loopback_modes *modes_ptr
+        cdef const cbladerf.bladerf_loopback_modes *modes_ptr
         result = cbladerf.bladerf_get_loopback_modes(self.__bladerf_device, &modes_ptr)
         raise_error('pybladerf_get_loopback_modes()', result)
         return [pybladerf_loopback(modes_ptr[i].mode) for i in range(result)]
@@ -1596,7 +1594,7 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_trigger_fire()', result)
 
     def pybladerf_trigger_state(self, trigger: pybladerf_trigger) -> tuple[bool, bool, bool]:
-        cdef bint is_armed, has_fired, fire_requested
+        cdef c_bool is_armed, has_fired, fire_requested
         cdef uint64_t resv1, resv2
         result = cbladerf.bladerf_trigger_state(self.__bladerf_device, trigger.get_ptr(), &is_armed, &has_fired, &fire_requested, &resv1, &resv2)
         raise_error('pybladerf_trigger_state()', result)
@@ -1859,7 +1857,7 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_set_rf_port()', result)
 
     def pybladerf_get_rf_port(self, channel: int) -> str:
-        cdef char **port
+        cdef const char **port
         result = cbladerf.bladerf_get_rf_port(self.__bladerf_device, channel, port)
         raise_error('pybladerf_get_rf_port()', result)
         return port[0].decode('utf-8')
@@ -1867,7 +1865,7 @@ cdef class PyBladerfDevice:
     def pybladerf_get_rf_ports(self, channel: int) -> list[str]:
         result = cbladerf.bladerf_get_rf_ports(self.__bladerf_device, channel, NULL, 0)
         raise_error('pybladerf_get_rf_ports()', result)
-        cdef char **ports
+        cdef const char **ports
         result = cbladerf.bladerf_get_rf_ports(self.__bladerf_device, channel, ports, result)
         raise_error('pybladerf_get_rf_ports()', result)
         return [ports[i].decode('utf-8') for i in range(result)]
@@ -1884,7 +1882,7 @@ cdef class PyBladerfDevice:
 
     # ---- BLADERF2 ---- #
     def pybladerf_get_bias_tee(self, channel: int) -> bool:
-        cdef bint enable
+        cdef c_bool enable
         result = cbladerf.bladerf_get_bias_tee(self.__bladerf_device, channel, &enable)
         raise_error('pybladerf_get_bias_tee()', result)
         return enable
@@ -1942,13 +1940,13 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_set_rfic_tx_fir()', result)
 
     def pybladerf_get_pll_lock_state(self) -> bool:
-        cdef bint locked
+        cdef c_bool locked
         result = cbladerf.bladerf_get_pll_lock_state(self.__bladerf_device, &locked)
         raise_error('pybladerf_get_pll_lock_state()', result)
         return locked
 
     def pybladerf_get_pll_enable(self) -> bool:
-        cdef bint enabled
+        cdef c_bool enabled
         result = cbladerf.bladerf_get_pll_enable(self.__bladerf_device, &enabled)
         raise_error('pybladerf_get_pll_enable()', result)
         return enabled
@@ -2000,7 +1998,7 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_set_clock_select()', result)
 
     def pybladerf_get_clock_output(self) -> bool:
-        cdef int state
+        cdef c_bool state
         result = cbladerf.bladerf_get_clock_output(self.__bladerf_device, &state)
         raise_error('pybladerf_get_clock_output()', result)
         return state
