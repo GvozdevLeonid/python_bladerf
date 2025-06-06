@@ -1,5 +1,8 @@
-run_available: dict[str, bool] = ...
-'''run_available[device.serialno] = True | False'''
+def stop_all() -> None:
+    ...
+
+def stop_sdr(serialno: str) -> None:
+    ...
 
 def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int | None = None,
                        gain: int = 0, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,

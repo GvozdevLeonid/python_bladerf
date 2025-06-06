@@ -1,7 +1,10 @@
 from python_bladerf import pybladerf
 
-run_available: dict[str, bool] = ...
-'''run_available[device.serialno] = True | False'''
+def stop_all() -> None:
+    ...
+
+def stop_sdr(serialno: str) -> None:
+    ...
 
 def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_000_000, baseband_filter_bandwidth: int | None = None,
                     gain: int = 20, bin_width: int = 100_000, channel: int = 0, oversample: bool = False, antenna_enable: bool = False,
