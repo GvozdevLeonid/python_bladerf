@@ -1,6 +1,6 @@
 [project]
 name = "python_bladerf"
-version = "1.3.1"
+version = "1.4.0"
 authors = [
   {name="Leonid Gvozdev", email="leo.gvozdev.dev@gmail.com"},
 ]
@@ -26,7 +26,7 @@ dependencies = [
 
 [build-system]
 requires = [
-    "Cython==0.29.37",
+    "Cython>=3.1.0,<3.2",
     "setuptools",
     "wheel",
     "numpy"
@@ -34,4 +34,4 @@ requires = [
 
 
 [project.scripts]
-python_bladerf= "python_bladerf.__main__:main"
+python_bladerf="python_bladerf.__main__:main"

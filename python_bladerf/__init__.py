@@ -1,4 +1,4 @@
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 from python_bladerf.pylibbladerf import pybladerf  # noqa F401
 from python_bladerf.pybladerf_tools import (  # noqa F401
