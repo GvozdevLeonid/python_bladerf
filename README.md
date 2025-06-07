@@ -2,7 +2,7 @@
 
 python_bladerf is a cython wrapper for [bladerf](https://github.com/Nuand/bladeRF). It also contains some additional tools.
 
-Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file. Minimum libbladeRF version: 2.5.1
+Before installing python_bladerf library, you must have bladerf host software installed. Because this library uses dynamic linking with an existing library file. Minimum libbladeRF version: 2.6.0, FX3 version: 2.6.0, FPGA version: 0.16.0!
 
 For windows users please use [additional steps](#installation-on-windows) to install python_bladerf
 You can install this library using
@@ -12,24 +12,32 @@ pip install git+https://github.com/GvozdevLeonid/python_bladerf.git
 
 If your bladerf files are in non-standard paths and during installation the python_bladerf cannot find libbladeRF.h and bladeRF2.h or the library files, you can specify the paths via environment variables
 ```
-export/set {linux and macos / windows}  PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h_andbladeRF2.h
-export/set {linux and macos / windows}  PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib, dll)
+LINUX/MACOS:
+export PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h and bladeRF2.h
+export PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib)
+WINDOWS:
+set PYTHON_BLADERF_INCLUDE_PATH=path_to_libbladeRF.h and bladeRF2.h
+set PYTHON_BLADERF_LIB_PATH=path_to_libbladerf.dll
 ```
+
+If you notice smeared frequencies in sweep mode please increase the time between sweeps.
+`export pybladerf_sweep_await_time=1.5-3 or more`
+await_time is the delay time between different frequencies in milliseconds
 
 ## Requirements:
 * Numpy>=2.2.1
-* Cython==0.29.37
+* Cython>=3.1.0,<3.2
 * Scipy (optional, for faster work)
 * pyFFTW (optional, for faster work)
 * pyjnius and android (only for android)
 
 ## bladerf:
-The library supports all bladerf2 functions, some of the functions can also work on the first versions.If there is a demand for full support of the first version, I will add it.
+The library supports all bladerf2 functions, some of the functions can also work on the first versions. If there is a demand for full support of the first version, I will add it.
 
 ## pybladerf tools:
 * pybladerf_info.py - Reading information about found devices.
-* pybladerf_sweep.pyx - a function that allows you to obtain a sweep over a given frequency range ( same as hackrf_sweep)
-* pybladerf_transfer.pyx - a function that allows you to record and play back samples
+* pybladerf_sweep.pyx - a function that allows you to obtain a sweep over a given frequency range (same as hackrf_sweep)
+* pybladerf_transfer.pyx - a function that allows you to record and play back samples (np.complex64)
 
 ## usage
 ```
@@ -43,7 +51,7 @@ options:
 Available commands:
   {info,sweep,transfer}
     info        Read device information from Bladerf such as serial number and FPGA version.
-    sweep       a command-line spectrum analyzer.
+    sweep       Spectrum analyzer.
     transfer    Send and receive signals using BladeRF. Input/output files consist of complex64 quadrature samples.
 ```
 ```
@@ -154,15 +162,9 @@ msvcr100.dll
 
 If you install bladerf yourself or via another path, set the following environment variables
 
-MSVC:
+MSVC | MinGW:
 ```
-  set PYTHON_BLADERF_CFLAGS=/I"{path to .h file directory}"
-  set PYTHON_BLADERF_LDFLAGS=/LIBPATH:"{path to .dll and .lib file directory}" bladeRF.lib
-  set BLADERF_LIB_DIR="{path to .dll and .lib file directory}"
-```
-MinGW:
-```
-  set PYTHON_BLADERF_CFLAGS=-I"{path to .h file directory}"
-  set PYTHONBLADERFF_LDFLAGS=-L"{path to .dll and .a file directory}" -lbladeRF'
+  set PYTHON_BLADERF_INCLUDE_PATH={path to .h file directory}
+  set PYTHON_BLADERF_LIB_PATH={path to .dll and .lib file directory}
   set BLADERF_LIB_DIR="{path to .dll and .lib file directory}"
 ```
