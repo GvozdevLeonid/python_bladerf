@@ -8,10 +8,9 @@ from setuptools.command.install import install  # type: ignore
 from setuptools.command.build_ext import build_ext  # type: ignore
 from Cython.Build import cythonize  # type: ignore
 
-libraries = ['bladeRF']
-
-INSTALL_REQUIRES = []
-SETUP_REQUIRES = []
+INSTALL_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
+SETUP_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
+libbladerf_h_path = ''
 
 PLATFORM = sys.platform
 
@@ -19,12 +18,6 @@ if getenv('LIBLINK'):
     PLATFORM = 'android'
 
 if PLATFORM != 'android':
-    SETUP_REQUIRES.append('Cython==0.29.37')
-    INSTALL_REQUIRES.append('Cython==0.29.37')
-
-    SETUP_REQUIRES.append('numpy')
-    INSTALL_REQUIRES.append('numpy')
-
     cflags = environ.get('CFLAGS', '')
     ldflags = environ.get('LDFLAGS', '')
     new_cflags = ''
@@ -34,10 +27,12 @@ if PLATFORM != 'android':
         if environ.get('PYTHON_BLADERF_CFLAGS', None) is None:
             try:
                 new_cflags = subprocess.check_output(['pkg-config', '--cflags', 'libbladeRF']).decode('utf-8').strip()
+                libbladerf_h_path = new_cflags[2:]
             except Exception:
                 raise RuntimeError('Unable to run pkg-config. Set cflags manually export PYTHON_BLADERF_CFLAGS=') from None
         else:
             new_cflags = environ.get('PYTHON_BLADERF_CFLAGS', '')
+            libbladerf_h_path = new_cflags[2:]
 
         if environ.get('PYTHON_BLADERF_LDFLAGS', None) is None:
             try:
@@ -51,21 +46,27 @@ if PLATFORM != 'android':
         include_path = 'C:\\Program Files\\BladeRF\\include'
         lib_path = 'C:\\Program Files\\BladeRF\\lib'
 
-        if environ.get('PYTHON_BLADERF_CFLAGS', None) is None:
+        if environ.get('PYTHON_BLADERF_INCLUDE_PATH', None) is None:
             new_cflags = f'-I"{include_path}"'
         else:
-            new_cflags = environ.get('PYTHON_BLADERF_CFLAGS', '')
+            include_path = environ.get('PYTHON_BLADERF_INCLUDE_PATH', '')
+            new_cflags = f'-I"{include_path}"'
+            libbladerf_h_path = include_path
 
-        if environ.get('PYTHON_BLADERF_LDFLAGS', None) is None:
+        if environ.get('PYTHON_BLADERF_LIB_PATH', None) is None:
             new_ldflags = f'-L"{lib_path}" -lbladeRF'
         else:
-            new_ldflags = environ.get('PYTHON_BLADERF_LDFLAGS', '')
+            lib_path = environ.get('PYTHON_BLADERF_LIB_PATH', '')
+            new_ldflags = f'-L"{lib_path}" -lbladeRF'
 
         environ['CL'] = f'/I"{include_path}"'
         environ['LINK'] = f'/LIBPATH:"{lib_path}" bladeRF.lib'
 
     environ['CFLAGS'] = f'{cflags} {new_cflags}'.strip()
     environ['LDFLAGS'] = f'{ldflags} {new_ldflags}'.strip()
+
+else:
+    libbladerf_h_path = environ.get('PYTHON_BLADERF_LIBBLADERF_H_PATH', '')
 
 
 class CustomBuildExt(build_ext):  # type: ignore
@@ -99,22 +100,24 @@ setup(
     ext_modules=[
         Extension(
             name='python_bladerf.pylibbladerf.pybladerf',
-            sources=['python_bladerf/pylibbladerf/pybladerf.pyx', 'python_bladerf/pylibbladerf/cbladerf.pxd'],
-            libraries=libraries,
-            include_dirs=['python_bladerf/pylibbladerf', numpy.get_include()],
+            sources=['python_bladerf/pylibbladerf/pybladerf.pyx'],
+            include_dirs=['python_bladerf/pylibbladerf', libbladerf_h_path, numpy.get_include()],
             extra_compile_args=['-w'],
+            language='c++',
         ),
         Extension(
             name='python_bladerf.pybladerf_tools.pybladerf_sweep',
             sources=['python_bladerf/pybladerf_tools/pybladerf_sweep.pyx'],
-            include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', numpy.get_include()],
+            include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', libbladerf_h_path, numpy.get_include()],
             extra_compile_args=['-w'],
+            language='c++',
         ),
         Extension(
             name='python_bladerf.pybladerf_tools.pybladerf_transfer',
             sources=['python_bladerf/pybladerf_tools/pybladerf_transfer.pyx'],
-            include_dirs=['python_bladerf/pybladerf_tools', numpy.get_include()],
+            include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', libbladerf_h_path, numpy.get_include()],
             extra_compile_args=['-w'],
+            language='c++',
         ),
     ],
     include_package_data=True,
