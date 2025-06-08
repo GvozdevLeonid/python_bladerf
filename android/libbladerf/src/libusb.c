@@ -141,12 +141,12 @@
      struct libusb_device_descriptor desc;
      libusb_context *context;
 
-    // status = libusb_set_option(NULL, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
-    //  if (status){
-    //      log_error("Could not initialize libusb: %s\n",
-    //                libusb_error_name(status));
-    //      return error_conv(status);
-    //  }
+    status = libusb_set_option(NULL, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
+     if (status){
+         log_error("Could not initialize libusb: %s\n",
+                   libusb_error_name(status));
+         return error_conv(status);
+     }
 
      status = libusb_init(&context);
      if (status) {

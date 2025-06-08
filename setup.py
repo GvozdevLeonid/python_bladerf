@@ -14,10 +14,8 @@ libbladerf_h_path = ''
 
 PLATFORM = sys.platform
 
-if getenv('LIBLINK'):
+if getenv('BUILD_ANDROID'):
     PLATFORM = 'android'
-
-print(environ)
 
 if PLATFORM != 'android':
     cflags = environ.get('CFLAGS', '')
