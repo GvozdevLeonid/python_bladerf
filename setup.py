@@ -17,6 +17,8 @@ PLATFORM = sys.platform
 if getenv('LIBLINK'):
     PLATFORM = 'android'
 
+print(environ)
+
 if PLATFORM != 'android':
     cflags = environ.get('CFLAGS', '')
     ldflags = environ.get('LDFLAGS', '')
