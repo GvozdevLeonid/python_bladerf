@@ -24,8 +24,8 @@
 # cython: language_level=3str
 from python_bladerf import pybladerf
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
+from python_bladerf.pylibbladerf.ctime cimport timespec, timespec_get
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
-from libc.time cimport timespec, timespec_get
 from python_bladerf import pybladerf
 from libcpp cimport bool as c_bool
 from libcpp.atomic cimport atomic

@@ -7,5 +7,6 @@ include python_bladerf/pylibbladerf/pybladerf.pyi
 include python_bladerf/pylibbladerf/pybladerf.pyx
 include python_bladerf/pylibbladerf/pybladerf.pxd
 include python_bladerf/pylibbladerf/cbladerf.pxd
+include python_bladerf/pylibbladerf/ctime.pxd
 include pyproject.toml
 include README.md

@@ -31,9 +31,9 @@ except ImportError:
         from numpy.fft import fft, fftshift  # type: ignore
 
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
+from python_bladerf.pylibbladerf.ctime cimport timespec, timespec_get
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
 from python_bladerf.pylibbladerf cimport cbladerf
-from libc.time cimport timespec, timespec_get
 from libcpp.queue cimport queue as c_queue
 from libc.stdio cimport fprintf, stderr
 from libc.stdlib cimport malloc, free
