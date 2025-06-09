@@ -38,7 +38,10 @@ LOCAL_EXPORT_C_INCLUDES := \
 	$(LIBAD936X_ROOT_ABS)/host/common/thirdparty/ad9361/sw/ \
 	${LIBAD936X_ROOT_ABS}/thirdparty/no-OS_local/platform_bladerf2/ \
 	${LIBAD936X_ROOT_ABS}/fpga_common/src/ \
-	${LIBAD936X_ROOT_ABS}/firmware_common/
+	${LIBAD936X_ROOT_ABS}/firmware_common/ \
+	${LIBAD936X_ROOT_ABS}/host/common/include/ \
+    ${LIBAD936X_ROOT_ABS}host/build/common/thirdparty/ad936x/ \
+	${LIBAD936X_ROOT_ABS}/thirdparty/analogdevicesinc/no-OS_local/platform_bladerf2/
 
 LOCAL_CFLAGS := \
 	-I${LIBAD936X_ROOT_ABS}/thirdparty/analogdevicesinc/no-OS_local/platform_bladerf2 \

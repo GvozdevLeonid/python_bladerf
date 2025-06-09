@@ -1,31 +1,34 @@
+# ruff: noqa: RUF012
 import os
 import shutil
-from typing import Any
+from typing import Any, override
 
-import sh  # type: ignore
-from pythonforandroid.archs import Arch  # type: ignore
-from pythonforandroid.logger import shprint  # type: ignore
-from pythonforandroid.recipe import NDKRecipe, Recipe  # type: ignore
-from pythonforandroid.util import current_directory  # type: ignore
+import sh
+from pythonforandroid.archs import Arch
+from pythonforandroid.logger import shprint
+from pythonforandroid.recipe import NDKRecipe, Recipe
+from pythonforandroid.util import current_directory
 
 
-class LibbladerfRecipe(NDKRecipe):  # type: ignore
+class LibbladerfRecipe(NDKRecipe):
 
     url = 'git+https://github.com/Nuand/bladeRF.git'
-    version = 'f81b82aa8e75ee8866d1aede2a09191d92399829'
-    patches = ('bladerf_android.patch', )
-    generated_libraries = ('libbladerf.so', )
+    version = 'bb26efdd207ee185b3f7b72f8835d7e49384ae1c'
+    generated_libraries = ['libbladerf.so']
+    patches = ['bladerf_android.patch']
     site_packages_name = 'libbladerf'
     library_version_major = '2'
-    library_version_minor = '5'
-    library_version_patch = '1'
+    library_version_minor = '6'
+    library_version_patch = '0'
 
-    depends = ('libusb', )
+    depends = ['libusb']
     name = 'libbladerf'
 
+    @override
     def should_build(self, arch: Arch) -> bool:
         return not os.path.exists(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libbladerf.so'))
 
+    @override
     def prebuild_arch(self, arch: Arch) -> None:
         super().prebuild_arch(arch)
 
@@ -60,19 +63,23 @@ class LibbladerfRecipe(NDKRecipe):  # type: ignore
                 os.path.join(self.get_recipe_dir(), 'pre_install.cmake'),
             )
 
-    def get_recipe_env(self, arch: Arch) -> dict[str, Any]:
-        env: dict[str, Any] = super().get_recipe_env(arch)
-        env['LDFLAGS'] += f'-L{self.ctx.get_libs_dir(arch.arch)}'
+    @override
+    def get_recipe_env(self, arch: Arch, **kwargs: Any) -> dict[str, Any]:
+        env: dict[str, Any] = super().get_recipe_env(arch, **kwargs)
+        env['LDFLAGS'] = env['LDFLAGS'] + f'-L{self.ctx.get_libs_dir(arch.arch)}'
 
         return env
 
+    @override
     def get_jni_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'jni')
 
+    @override
     def get_lib_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
-    def build_arch(self, arch: Arch, *extra_args: Any) -> None:
+    @override
+    def build_arch(self, arch: Arch, *args: Any) -> None:
         env = self.get_recipe_env(arch)
 
         shutil.copyfile(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libusb1.0.so'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni', 'libusb1.0.so'))
@@ -85,7 +92,7 @@ class LibbladerfRecipe(NDKRecipe):  # type: ignore
                 'APP_PLATFORM=android-' + str(self.ctx.ndk_api),
                 'NDK=' + self.ctx.ndk_dir,
                 'APP_ABI=' + arch.arch,
-                *extra_args,
+                *args,
                 _env=env,
             )
 
