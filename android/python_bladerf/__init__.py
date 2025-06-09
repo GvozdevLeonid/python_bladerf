@@ -1,6 +1,6 @@
 # ruff: noqa: RUF012
 import os
-from typing import Any, override
+from typing import Any
 
 from pythonforandroid.archs import Arch
 from pythonforandroid.recipe import (
@@ -17,7 +17,6 @@ class PythonBladerfRecipe(PyProjectRecipe):
     name = 'python_bladerf'
     version = '1.4.0'
 
-    @override
     def get_recipe_env(self, arch: Arch, **kwargs: Any) -> dict[str, Any]:
         env: dict[str, Any] = super().get_recipe_env(arch, **kwargs)
 

@@ -1,7 +1,7 @@
 # ruff: noqa: RUF012
 import os
 import shutil
-from typing import Any, override
+from typing import Any
 
 import sh
 from pythonforandroid.archs import Arch
@@ -18,19 +18,15 @@ class LibusbRecipe(NDKRecipe):
     version = '1.0.26'
     name = 'libusb'
 
-    @override
     def should_build(self, arch: Arch) -> bool:
         return not os.path.exists(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libusb1.0.so'))
 
-    @override
     def get_jni_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'jni')
 
-    @override
     def get_lib_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
-    @override
     def build_arch(self, arch: Arch, *args: Any) -> None:
         env = self.get_recipe_env(arch)
         with current_directory(self.get_build_dir(arch.arch)):

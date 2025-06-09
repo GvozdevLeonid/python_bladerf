@@ -1,7 +1,7 @@
 # ruff: noqa: RUF012
 import os
 import shutil
-from typing import Any, override
+from typing import Any
 
 import sh
 from pythonforandroid.archs import Arch
@@ -24,11 +24,9 @@ class LibbladerfRecipe(NDKRecipe):
     depends = ['libusb']
     name = 'libbladerf'
 
-    @override
     def should_build(self, arch: Arch) -> bool:
         return not os.path.exists(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libbladerf.so'))
 
-    @override
     def prebuild_arch(self, arch: Arch) -> None:
         super().prebuild_arch(arch)
 
@@ -63,22 +61,18 @@ class LibbladerfRecipe(NDKRecipe):
                 os.path.join(self.get_recipe_dir(), 'pre_install.cmake'),
             )
 
-    @override
     def get_recipe_env(self, arch: Arch, **kwargs: Any) -> dict[str, Any]:
         env: dict[str, Any] = super().get_recipe_env(arch, **kwargs)
         env['LDFLAGS'] = env['LDFLAGS'] + f'-L{self.ctx.get_libs_dir(arch.arch)}'
 
         return env
 
-    @override
     def get_jni_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'jni')
 
-    @override
     def get_lib_dir(self, arch: Arch) -> str:
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
-    @override
     def build_arch(self, arch: Arch, *args: Any) -> None:
         env = self.get_recipe_env(arch)
 
