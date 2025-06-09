@@ -13,7 +13,7 @@ from pythonforandroid.util import current_directory
 class LibbladerfRecipe(NDKRecipe):
 
     url = 'git+https://github.com/Nuand/bladeRF.git'
-    version = 'bb26efdd207ee185b3f7b72f8835d7e49384ae1c'
+    version = '09efbb40b8ede1d39f744c561db1eb24ea5a1a99'
     generated_libraries = ['libbladerf.so']
     patches = ['bladerf_android.patch']
     site_packages_name = 'libbladerf'
