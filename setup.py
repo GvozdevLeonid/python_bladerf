@@ -14,7 +14,7 @@ libbladerf_h_path = ''
 
 PLATFORM = sys.platform
 
-if getenv('BUILD_ANDROID'):
+if getenv('LIBLINK'):
     PLATFORM = 'android'
 
 if PLATFORM != 'android':
