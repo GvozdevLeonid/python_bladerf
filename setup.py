@@ -45,6 +45,7 @@ if PLATFORM != 'android':
     elif PLATFORM.startswith('win'):
         include_path = 'C:\\Program Files\\BladeRF\\include'
         lib_path = 'C:\\Program Files\\BladeRF\\lib'
+        libbladerf_h_path = include_path
 
         if environ.get('PYTHON_BLADERF_INCLUDE_PATH', None) is None:
             new_cflags = f'-I"{include_path}"'
