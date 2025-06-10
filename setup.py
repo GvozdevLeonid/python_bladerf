@@ -27,12 +27,12 @@ if PLATFORM != 'android':
         if environ.get('PYTHON_BLADERF_CFLAGS', None) is None:
             try:
                 new_cflags = subprocess.check_output(['pkg-config', '--cflags', 'libbladeRF']).decode('utf-8').strip()
-                libbladerf_h_path = new_cflags[2:]
+                libbladerf_h_path = new_cflags.split(' ')[0][2:]
             except Exception:
                 raise RuntimeError('Unable to run pkg-config. Set cflags manually export PYTHON_BLADERF_CFLAGS=') from None
         else:
             new_cflags = environ.get('PYTHON_BLADERF_CFLAGS', '')
-            libbladerf_h_path = new_cflags[2:]
+            libbladerf_h_path = new_cflags.split(' ')[0][2:]
 
         if environ.get('PYTHON_BLADERF_LDFLAGS', None) is None:
             try:
