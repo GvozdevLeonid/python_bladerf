@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 # distutils: language = c++
+# cython: language_level=3str
 from libcpp cimport bool as c_bool
 from libc.stdint cimport *
 

@@ -22,7 +22,6 @@
 
 # distutils: language = c++
 # cython: language_level=3str
-from python_bladerf import pybladerf
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
 from python_bladerf.pylibbladerf.ctime cimport timespec, timespec_get
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
@@ -125,6 +124,8 @@ cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
                       object file,
                       int num_samples):
 
+    global working_sdrs
+
     cdef TransferStatus* transfer_status = <TransferStatus*> transfer_status_ptr
 
     cdef uint64_t to_read
@@ -173,6 +174,8 @@ cpdef void tx_process(c_pybladerf.PyBladerfDevice device,
                       object tx_buffer,
                       object file,
                       int num_samples):
+
+    global working_sdrs
 
     cdef TransferStatus* transfer_status = <TransferStatus*> transfer_status_ptr
 
@@ -304,7 +307,6 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
     cdef uint8_t device_id = init_signals()
     cdef c_pybladerf.PyBladerfDevice device
     cdef uint8_t formated_channel
-    cdef int i
 
     if serial_number is None:
         device = pybladerf.pybladerf_open()

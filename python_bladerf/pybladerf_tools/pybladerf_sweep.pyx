@@ -151,7 +151,7 @@ def stop_sdr(serialno: str) -> None:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void process_data(uint8_t device_id,
+cpdef void process_data(uint8_t device_id,
                        uint64_t sample_rate,
                        int sweep_style,
                        uint8_t oversample,
@@ -165,6 +165,8 @@ cdef void process_data(uint8_t device_id,
                        uintptr_t empty_raw_data_mutex_ptr,
                        object file,
                        object queue):
+
+    global working_sdrs
 
     cdef c_queue[QueueNode*]* raw_data = <c_queue[QueueNode*]*> raw_data_ptr
     cdef c_queue[QueueNode*]* empty_raw_data = <c_queue[QueueNode*]*> empty_raw_data_ptr
@@ -301,7 +303,6 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     global working_sdrs, sdr_ids
 
     cdef uint8_t device_id = init_signals()
-
     cdef uint8_t formated_channel = pybladerf.PYBLADERF_CHANNEL_RX(channel)
     cdef c_pybladerf.PyBladerfDevice device
     cdef cbladerf.bladerf* c_device
