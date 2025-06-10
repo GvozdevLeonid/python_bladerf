@@ -79,7 +79,7 @@ bladerf_usb_vids = (0x2cf0, 0x1d50)
 bladerf_usb_pids = (0x5246, 0x5250, 0x6066)
 
 
-def get_bladerf_device_list(num_devices: int | None = None) -> list[tuple[int, int, str, str]]:
+def get_bladerf_device_list(num_devices: int | None = None) -> list[tuple[int, str, str, str]]:
     events: dict[Any, Any] = {}
     bladerf_device_list = []
     usb_broadcast_receiver = USBBroadcastReceiver(events)
