@@ -16,8 +16,8 @@ LINUX/MACOS:
 export PYTHON_BLADERF_CFLAGS=path_to_libbladeRF.h and bladeRF2.h
 export PYTHON_BLADERF_LDFLAGS=path_to_libbladerf.(so, dylib)
 WINDOWS:
-set PYTHON_BLADERF_INCLUDE_PATH=path_to_libbladeRF.h and bladeRF2.h
-set PYTHON_BLADERF_LIB_PATH=path_to_libbladerf.dll
+set PYTHON_BLADERF_INCLUDE_PATH=path_to_libbladeRF.h and bladeRF2.h dir
+set PYTHON_BLADERF_LIB_PATH=path_to_libbladerf.dll dir
 ```
 
 If you notice smeared frequencies in sweep mode please increase the time between sweeps.
