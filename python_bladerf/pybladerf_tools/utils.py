@@ -156,7 +156,7 @@ class FileBuffer:
                 for i in range(0, len(data), chunk_elements):
                     chunk = data[i:i + chunk_elements]
 
-                    self._writer.write(chunk)
+                    self._writer.write(chunk)  # type: ignore
                     self._write_ptr += self._dtype_size * chunk.size
 
                     self._not_empty.set()

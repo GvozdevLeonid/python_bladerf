@@ -23,7 +23,8 @@
 # ruff: noqa N802
 
 from enum import IntEnum
-from typing import Any, Callable, Self, override
+from typing import Any, Callable, Self
+from typing_extensions import override
 
 import numpy as np
 

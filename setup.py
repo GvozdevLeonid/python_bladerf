@@ -3,10 +3,10 @@ import sys
 from os import environ, getenv, path
 
 import numpy
-from setuptools import Extension, find_packages, setup  # type: ignore
-from setuptools.command.install import install  # type: ignore
-from setuptools.command.build_ext import build_ext  # type: ignore
-from Cython.Build import cythonize  # type: ignore
+from setuptools import Extension, find_packages, setup
+from setuptools.command.install import install
+from setuptools.command.build_ext import build_ext
+from Cython.Build import cythonize
 
 INSTALL_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
 SETUP_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
@@ -69,50 +69,50 @@ else:
     libbladerf_h_path = environ.get('PYTHON_BLADERF_LIBBLADERF_H_PATH', '')
 
 
-class CustomBuildExt(build_ext):  # type: ignore
-    def run(self) -> None:
+class CustomBuildExt(build_ext):
+    def run(self) -> None:  # type: ignore
         compile_env = {'ANDROID': PLATFORM == 'android'}
         self.distribution.ext_modules = cythonize(  # type: ignore
             self.distribution.ext_modules,
             compile_time_env=compile_env,
         )
-        super().run()
+        super().run()  # type: ignore
 
 
-class InstallWithPth(install):  # type: ignore
-    def run(self) -> None:
-        super().run()
+class InstallWithPth(install):
+    def run(self) -> None:  # type: ignore
+        super().run()  # type: ignore
 
         if PLATFORM.startswith('win'):
             pth_code = (
                 'import os; '
                 'os.add_dll_directory(os.getenv("BLADERF_LIB_DIR", r"C:\\Program Files\\BladeRF\\lib"))'
             )
-            with open(path.join(self.install_lib, "python_bladerf.pth"), mode='w', encoding='utf-8') as file:
+            with open(path.join(self.install_lib, "python_bladerf.pth"), mode='w', encoding='utf-8') as file:  # type: ignore
                 file.write(pth_code)
 
 
-setup(
+setup(  # type: ignore
     name='python_bladerf',
     cmdclass={'build_ext': CustomBuildExt, 'install': InstallWithPth},
     install_requires=INSTALL_REQUIRES,
     setup_requires=SETUP_REQUIRES,
     ext_modules=[
-        Extension(
+        Extension(  # type: ignore
             name='python_bladerf.pylibbladerf.pybladerf',
             sources=['python_bladerf/pylibbladerf/pybladerf.pyx'],
             include_dirs=['python_bladerf/pylibbladerf', libbladerf_h_path, numpy.get_include()],
             extra_compile_args=['-w'],
             language='c++',
         ),
-        Extension(
+        Extension(  # type: ignore
             name='python_bladerf.pybladerf_tools.pybladerf_sweep',
             sources=['python_bladerf/pybladerf_tools/pybladerf_sweep.pyx'],
             include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', libbladerf_h_path, numpy.get_include()],
             extra_compile_args=['-w'],
             language='c++',
         ),
-        Extension(
+        Extension(  # type: ignore
             name='python_bladerf.pybladerf_tools.pybladerf_transfer',
             sources=['python_bladerf/pybladerf_tools/pybladerf_transfer.pyx'],
             include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', libbladerf_h_path, numpy.get_include()],
