@@ -20,13 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# ruff: noqa N802
+# ruff: noqa: N802, N801, N818
 
+from collections.abc import Callable
 from enum import IntEnum
-from typing import Any, Callable, Self
-from typing_extensions import override
+from typing import Any, Self
 
 import numpy as np
+from typing_extensions import override
 
 def PYBLADERF_CHANNEL_RX(channel: int) -> int:
     '''Return rx channel by number (0, 1)'''
@@ -795,7 +796,7 @@ class pybladerf_devinfo:
 
     def __init__(self,
                  backend: pybladerf_backend = pybladerf_backend.PYBLADERF_BACKEND_ANY,
-                 serial: str  = 'ANY',
+                 serial: str = 'ANY',
                  usb_bus: int = 255,
                  usb_addr: int = 255,
                  instance: int = 4294967295,
@@ -1227,7 +1228,6 @@ class PyBladeRFDeviceList:
     def products(self) -> list[str]:
         '''List of product description string of found devices'''
         ...
-
 
 class PyBladerfDevice:
     '''
