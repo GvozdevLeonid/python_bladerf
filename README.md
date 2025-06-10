@@ -164,7 +164,7 @@ If you install bladerf yourself or via another path, set the following environme
 
 MSVC | MinGW:
 ```
-  set PYTHON_BLADERF_INCLUDE_PATH={path to .h file directory}
-  set PYTHON_BLADERF_LIB_PATH={path to .dll and .lib file directory}
-  set BLADERF_LIB_DIR="{path to .dll and .lib file directory}"
+  set PYTHON_BLADERF_INCLUDE_PATH=path to .h file directory
+  set PYTHON_BLADERF_LIB_PATH=path to .dll and .lib file directory
+  set BLADERF_LIB_DIR=path to .dll and .lib file directory
 ```
