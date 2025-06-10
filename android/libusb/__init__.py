@@ -28,7 +28,7 @@ class LibusbRecipe(NDKRecipe):
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
     def build_arch(self, arch: Arch, *args: Any) -> None:
-        env = self.get_recipe_env(arch)
+        env: dict[str, Any] = self.get_recipe_env(arch)
         with current_directory(self.get_build_dir(arch.arch)):
             shprint(
                 sh.Command(os.path.join(self.ctx.ndk_dir, 'ndk-build')),

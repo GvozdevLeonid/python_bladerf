@@ -74,12 +74,10 @@ class LibbladerfRecipe(NDKRecipe):
         return os.path.join(self.get_build_dir(arch.arch), 'android', 'obj', 'local', arch.arch)
 
     def build_arch(self, arch: Arch, *args: Any) -> None:
-        env = self.get_recipe_env(arch)
-
+        env: dict[str, Any] = self.get_recipe_env(arch)
         shutil.copyfile(os.path.join(self.ctx.get_libs_dir(arch.arch), 'libusb1.0.so'), os.path.join(self.get_build_dir(arch.arch), 'android', 'jni', 'libusb1.0.so'))
 
         with current_directory(self.get_build_dir(arch.arch)):
-
             shprint(
                 sh.Command(os.path.join(self.ctx.ndk_dir, 'ndk-build')),
                 'NDK_PROJECT_PATH=' + self.get_build_dir(arch.arch) + '/android',
