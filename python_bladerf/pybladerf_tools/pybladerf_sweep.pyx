@@ -31,8 +31,8 @@ except ImportError:
         from numpy.fft import fft, fftshift  # type: ignore
 
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
-from python_bladerf.pylibbladerf.ctime cimport timespec, timespec_get
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
+from python_bladerf.pylibbladerf.ctime cimport get_time
 from python_bladerf.pylibbladerf cimport cbladerf
 from libcpp.queue cimport queue as c_queue
 from libc.stdio cimport fprintf, stderr
@@ -99,17 +99,6 @@ cdef struct QuickTune:
 cdef struct SweepStep:
     uint64_t frequency
     uint64_t schedule_time
-
-
-cdef double get_timestamp() nogil:
-    cdef timespec ts
-
-    if timespec_get(&ts, 1) != 0:
-        return <double>ts.tv_sec + <double>ts.tv_nsec / 1000000000.0
-    else:
-        with gil:
-            return time.time()
-
 
 def sigint_callback_handler(sig, frame, sdr_id):
     global working_sdrs
@@ -464,8 +453,8 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     cdef uint64_t await_time = int(time_1ms * float(os.environ.get('pybladerf_sweep_await_time', 1.5)))
     cdef uint16_t tune_steps = len(calculated_frequencies)
 
-    cdef double time_start = get_timestamp()
-    cdef double time_prev = get_timestamp()
+    cdef double time_start = get_time()
+    cdef double time_prev = get_time()
     cdef uint8_t free_rffe_profile = 0
     cdef uint8_t rffe_profiles = min(8, tune_steps)
 
@@ -509,7 +498,7 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
         schedule_timestamp += await_time + fft_size
         tune_step = (tune_step + 1) % tune_steps
 
-    sweep_time = get_timestamp()
+    sweep_time = get_time()
     with nogil:
         while working_sdrs[device_id].load():
 
@@ -584,14 +573,14 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
                 tune_step = (tune_step + 1) % tune_steps
 
                 if tune_step == 0:
-                    sweep_time = get_timestamp()
+                    sweep_time = get_time()
                     sweep_count += 1
 
                     if c_one_shot or (c_num_sweeps == sweep_count):
                         if sweep_count:
                             working_sdrs[device_id].store(0)
 
-                time_now = get_timestamp()
+                time_now = get_time()
                 time_difference = time_now - time_prev
                 if time_difference >= 1.0:
                     if c_print_to_console:
@@ -631,7 +620,7 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     if filename is not None:
         file.close()
 
-    time_now = get_timestamp()
+    time_now = get_time()
     time_difference = time_now - time_prev
     if sweep_rate == 0 and time_difference > 0:
         sweep_rate = sweep_count / (time_now - time_start)

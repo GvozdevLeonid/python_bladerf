@@ -23,8 +23,8 @@
 # distutils: language = c++
 # cython: language_level=3str
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
-from python_bladerf.pylibbladerf.ctime cimport timespec, timespec_get
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
+from python_bladerf.pylibbladerf.ctime cimport get_time
 from python_bladerf import pybladerf
 from libcpp cimport bool as c_bool
 from libcpp.atomic cimport atomic
@@ -63,15 +63,6 @@ cdef struct TransferStatus:
     atomic[uint64_t] byte_count
     atomic[uint64_t] stream_power
     c_bool tx_complete
-
-cdef double get_timestamp() noexcept nogil:
-    cdef timespec ts
-
-    if timespec_get(&ts, 1) != 0:
-        return <double>ts.tv_sec + <double>ts.tv_nsec / 1000000000.0
-    else:
-        with gil:
-            return time.time()
 
 
 def sigint_callback_handler(sig, frame, sdr_id):
@@ -449,8 +440,8 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
     if num_samples and print_to_console:
         sys.stderr.write(f'samples_to_xfer {num_samples}/{num_samples / (5e5 if oversample else 25e4):.3f} MB\n')
 
-    cdef double time_start = get_timestamp()
-    cdef double time_prev = get_timestamp()
+    cdef double time_start = get_time()
+    cdef double time_prev = get_time()
     cdef double time_difference = 0
     cdef uint64_t stream_power = 0
     cdef double dB_full_scale = 0
@@ -461,7 +452,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
 
     while working_sdrs[device_id].load():
         time.sleep(0.05)
-        time_now = get_timestamp()
+        time_now = get_time()
         time_difference = time_now - time_prev
         if time_difference >= 1.0:
             if print_to_console:
