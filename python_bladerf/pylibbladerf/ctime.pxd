@@ -3,7 +3,6 @@ IF ANDROID:
         """
         #include <time.h>
         #define timespec_get(ts, base) (clock_gettime(CLOCK_REALTIME, ts) == 0 ? (base) : 0)
-        #endif
         """
 
 
