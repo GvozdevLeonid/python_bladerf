@@ -421,6 +421,7 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     file = open(filename, 'w' if not binary_output else 'wb') if filename is not None else (sys.stdout.buffer if binary_output else sys.stdout)
     notify_finished = threading.Event()
 
+    device.pybladerf_set_rfic_rx_fir(pybladerf.pybladerf_rfic_rxfir.PYBLADERF_RFIC_RXFIR_BYPASS)
     device.pybladerf_sync_config(
         layout=pybladerf.pybladerf_channel_layout.PYBLADERF_RX_X1,
         data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META,
