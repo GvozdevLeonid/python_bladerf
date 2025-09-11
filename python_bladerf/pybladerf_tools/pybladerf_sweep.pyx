@@ -167,6 +167,7 @@ cpdef void process_data(uint8_t device_id,
     cdef cnp.ndarray window = np.hanning(fft_size)
 
     cdef cnp.ndarray data
+    cdef cnp.ndarray raw_iq
     cdef cnp.ndarray fftOut
     cdef cnp.ndarray pwr
 
@@ -202,7 +203,9 @@ cpdef void process_data(uint8_t device_id,
             else:
                 data = np.frombuffer(<uint16_t[:fft_size * 2]> node.buffer, dtype=np.int16)  # type: ignore
 
-            fftOut = fft((data[::2] / divider + 1j * data[1::2] / divider) * window)
+            raw_iq = data[::2] / divider + 1j * data[1::2] / divider
+            raw_iq -= raw_iq.mean()
+            fftOut = fft(raw_iq * window)
 
             empty_raw_data_mutex.lock()
             empty_raw_data.push(node)
@@ -240,13 +243,15 @@ cpdef void process_data(uint8_t device_id,
                         'timestamp': time_str,
                         'start_frequency': frequency,
                         'stop_frequency': frequency + sample_rate // 4,
-                        'array': pwr[fft_1_start:fft_1_stop].astype(np.float32)
+                        'array': pwr[fft_1_start:fft_1_stop].astype(np.float32),
+                        'raw_iq': raw_iq,
                     })
                     queue.put({
                         'timestamp': time_str,
                         'start_frequency': frequency + sample_rate // 2,
                         'stop_frequency': frequency + (sample_rate * 3) // 4,
-                        'array': pwr[fft_2_start:fft_2_stop].astype(np.float32)
+                        'array': pwr[fft_2_start:fft_2_stop].astype(np.float32),
+                        'raw_iq': raw_iq,
                     })
 
                 else:
@@ -254,7 +259,8 @@ cpdef void process_data(uint8_t device_id,
                         'timestamp': time_str,
                         'start_frequency': frequency,
                         'stop_frequency': frequency + sample_rate,
-                        'array': pwr.astype(np.float32)
+                        'array': pwr.astype(np.float32),
+                        'raw_iq': raw_iq,
                     })
 
             else:
