@@ -243,15 +243,13 @@ cpdef void process_data(uint8_t device_id,
                         'timestamp': time_str,
                         'start_frequency': frequency,
                         'stop_frequency': frequency + sample_rate // 4,
-                        'array': pwr[fft_1_start:fft_1_stop].astype(np.float32),
-                        'raw_iq': raw_iq,
+                        'fft': pwr[fft_1_start:fft_1_stop].astype(np.float32),
                     })
                     queue.put({
                         'timestamp': time_str,
                         'start_frequency': frequency + sample_rate // 2,
                         'stop_frequency': frequency + (sample_rate * 3) // 4,
-                        'array': pwr[fft_2_start:fft_2_stop].astype(np.float32),
-                        'raw_iq': raw_iq,
+                        'fft': pwr[fft_2_start:fft_2_stop].astype(np.float32),
                     })
 
                 else:
@@ -259,7 +257,7 @@ cpdef void process_data(uint8_t device_id,
                         'timestamp': time_str,
                         'start_frequency': frequency,
                         'stop_frequency': frequency + sample_rate,
-                        'array': pwr.astype(np.float32),
+                        'fft': pwr.astype(np.float32),
                         'raw_iq': raw_iq,
                     })
 
