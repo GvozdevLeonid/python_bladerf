@@ -204,8 +204,8 @@ cpdef void process_data(uint8_t device_id,
                 data = np.frombuffer(<uint16_t[:fft_size * 2]> node.buffer, dtype=np.int16)  # type: ignore
 
             raw_iq = data[::2] / divider + 1j * data[1::2] / divider
-            raw_iq -= raw_iq.mean()
-            fftOut = fft(raw_iq * window)
+            raw_iq =  (raw_iq - raw_iq.mean()) * window 
+            fftOut = fft(raw_iq)
 
             empty_raw_data_mutex.lock()
             empty_raw_data.push(node)
