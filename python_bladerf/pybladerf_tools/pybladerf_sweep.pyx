@@ -204,7 +204,7 @@ cpdef void process_data(uint8_t device_id,
                 data = np.frombuffer(<uint16_t[:fft_size * 2]> node.buffer, dtype=np.int16)  # type: ignore
 
             raw_iq = data[::2] / divider + 1j * data[1::2] / divider
-            raw_iq =  (raw_iq - raw_iq.mean()) * window 
+            raw_iq = (raw_iq - raw_iq.mean()) * window 
             fftOut = fft(raw_iq)
 
             empty_raw_data_mutex.lock()
@@ -607,8 +607,8 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
             sys.stderr.write('\nExiting... [ pybladerf streaming stopped ]\n')
 
     working_sdrs[device_id].store(0)
-    sdr_ids.pop(device.serialno, None)
     notify_finished.wait()
+    sdr_ids.pop(device.serialno, None)
 
     while not raw_data.empty():
         node = raw_data.front()
