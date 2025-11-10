@@ -21,7 +21,8 @@
 # SOFTWARE.
 
 # distutils: language = c++
-# cython: language_level=3str
+# cython: language_level = 3str
+# cython: freethreading_compatible = True
 from libcpp cimport bool as c_bool
 from . cimport cbladerf
 

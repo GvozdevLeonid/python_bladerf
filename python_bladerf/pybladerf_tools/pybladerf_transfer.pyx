@@ -21,10 +21,10 @@
 # SOFTWARE.
 
 # distutils: language = c++
-# cython: language_level=3str
+# cython: language_level = 3str
+# cython: freethreading_compatible = True
 from libc.stdint cimport uint64_t, uint32_t, uint16_t, uint8_t, uintptr_t
 from python_bladerf.pylibbladerf cimport pybladerf as c_pybladerf
-from python_bladerf.pylibbladerf.ctime cimport get_time
 from python_bladerf import pybladerf
 from libcpp cimport bool as c_bool
 from libcpp.atomic cimport atomic
@@ -110,7 +110,7 @@ cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
                       uintptr_t transfer_status_ptr,
                       uint8_t channel,
                       uint8_t oversample,
-                      object notify_finished,
+                      object close_ready,
                       object rx_buffer,
                       object file,
                       int num_samples):
@@ -150,7 +150,7 @@ cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
         if num_samples == 0:
             working_sdrs[device_id].store(0)
 
-    notify_finished.set()
+    close_ready.set()
 
 
 @cython.boundscheck(False)
@@ -161,7 +161,7 @@ cpdef void tx_process(c_pybladerf.PyBladerfDevice device,
                       uint8_t channel,
                       uint8_t oversample,
                       uint8_t repeat_tx,
-                      object notify_finished,
+                      object close_ready,
                       object tx_buffer,
                       object file,
                       int num_samples):
@@ -284,7 +284,7 @@ cpdef void tx_process(c_pybladerf.PyBladerfDevice device,
             transfer_status.stream_power.fetch_add(np.sum(buffer[:writed * 2].astype(np.int32) ** 2))
             continue
 
-    notify_finished.set()
+    close_ready.set()
 
 
 def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_000, baseband_filter_bandwidth: int | None = None,
@@ -384,7 +384,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
 
     rx_file = open(rx_filename, 'wb') if rx_filename not in ('-', None) else (sys.stdout.buffer if rx_filename == '-' else None)
     tx_file = open(tx_filename, 'rb') if tx_filename not in ('-', None) else (sys.stdin.buffer if tx_filename == '-' else None)
-    notify_finished = threading.Event()
+    close_ready = threading.Event()
 
     cdef TransferStatus transfer_status
     if rx_buffer is not None or rx_filename is not None:
@@ -403,7 +403,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
             <uintptr_t> &transfer_status,
             formated_channel,
             1 if oversample else 0,
-            notify_finished,
+            close_ready,
             rx_buffer,
             rx_file,
             num_samples if num_samples else -1
@@ -427,7 +427,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
             formated_channel,
             1 if oversample else 0,
             1 if repeat_tx else 0,
-            notify_finished,
+            close_ready,
             tx_buffer,
             tx_file,
             num_samples if num_samples else -1
@@ -440,8 +440,8 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
     if num_samples and print_to_console:
         sys.stderr.write(f'samples_to_xfer {num_samples}/{num_samples / (5e5 if oversample else 25e4):.3f} MB\n')
 
-    cdef double time_start = get_time()
-    cdef double time_prev = get_time()
+    cdef double time_start = time.time()
+    cdef double time_prev = time.time()
     cdef double time_difference = 0
     cdef uint64_t stream_power = 0
     cdef double dB_full_scale = 0
@@ -452,7 +452,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
 
     while working_sdrs[device_id].load():
         time.sleep(0.05)
-        time_now = get_time()
+        time_now = time.time()
         time_difference = time_now - time_prev
         if time_difference >= 1.0:
             if print_to_console:
@@ -483,7 +483,7 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
 
     working_sdrs[device_id].store(0)
     sdr_ids.pop(device.serialno, None)
-    notify_finished.wait()
+    close_ready.wait()
 
     trigger.role = pybladerf.pybladerf_trigger_role.PYBLADERF_TRIGGER_ROLE_DISABLED
     device.pybladerf_trigger_arm(trigger, False)
