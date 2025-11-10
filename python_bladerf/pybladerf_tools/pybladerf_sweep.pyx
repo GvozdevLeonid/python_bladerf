@@ -524,9 +524,6 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     close_ready.wait()
     sdr_ids.pop(device.serialno, None)
 
-    del empty_raw_data_mutex
-    del raw_data_mutex
-
     if filename is not None:
         file.close()
 
