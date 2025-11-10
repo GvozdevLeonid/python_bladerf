@@ -15,7 +15,7 @@ class PythonBladerfRecipe(PyProjectRecipe):
     hostpython_prerequisites = ['Cython>=3.1.0,<3.2']
     site_packages_name = 'python_bladerf'
     name = 'python_bladerf'
-    version = '1.4.0'
+    version = '1.5.0'
 
     def get_recipe_env(self, arch: Arch, **kwargs: Any) -> dict[str, Any]:
         env: dict[str, Any] = super().get_recipe_env(arch, **kwargs)

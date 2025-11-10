@@ -8,8 +8,8 @@ from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
-INSTALL_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
-SETUP_REQUIRES = ['Cython>=3.1.0,<3.2', 'numpy']
+INSTALL_REQUIRES = ['Cython>=3.1.0,<3.2.1', 'numpy']
+SETUP_REQUIRES = ['Cython>=3.1.0,<3.2.1', 'numpy']
 libbladerf_h_paths = []
 
 PLATFORM = sys.platform
@@ -109,6 +109,13 @@ setup(  # type: ignore
         Extension(  # type: ignore
             name='python_bladerf.pybladerf_tools.pybladerf_sweep',
             sources=['python_bladerf/pybladerf_tools/pybladerf_sweep.pyx'],
+            include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', *libbladerf_h_paths, numpy.get_include()],
+            extra_compile_args=['-w'],
+            language='c++',
+        ),
+        Extension(  # type: ignore
+            name='python_bladerf.pybladerf_tools.pybladerf_scan',
+            sources=['python_bladerf/pybladerf_tools/pybladerf_scan.pyx'],
             include_dirs=['python_bladerf/pylibbladerf', 'python_bladerf/pybladerf_tools', *libbladerf_h_paths, numpy.get_include()],
             extra_compile_args=['-w'],
             language='c++',

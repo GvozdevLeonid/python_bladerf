@@ -2,11 +2,12 @@ include python_bladerf/pybladerf_tools/pybladerf_transfer.pyi
 include python_bladerf/pybladerf_tools/pybladerf_transfer.pyx
 include python_bladerf/pybladerf_tools/pybladerf_sweep.pyi
 include python_bladerf/pybladerf_tools/pybladerf_sweep.pyx
+include python_bladerf/pybladerf_tools/pybladerf_scan.pyi
+include python_bladerf/pybladerf_tools/pybladerf_scan.pyx
 include python_bladerf/pylibbladerf/bladerf_stream.h
 include python_bladerf/pylibbladerf/pybladerf.pyi
 include python_bladerf/pylibbladerf/pybladerf.pyx
 include python_bladerf/pylibbladerf/pybladerf.pxd
 include python_bladerf/pylibbladerf/cbladerf.pxd
-include python_bladerf/pylibbladerf/ctime.pxd
 include pyproject.toml
 include README.md

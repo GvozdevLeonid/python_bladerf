@@ -26,7 +26,7 @@ await_time is the delay time between different frequencies in milliseconds
 
 ## Requirements:
 * Numpy>=2.2.1
-* Cython>=3.1.0,<3.2
+* Cython>=3.1.0,<3.2.1
 * Scipy (optional, for faster work)
 * pyFFTW (optional, for faster work)
 * pyjnius and android (only for android)
