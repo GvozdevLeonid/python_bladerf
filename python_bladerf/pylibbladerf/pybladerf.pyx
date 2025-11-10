@@ -1716,13 +1716,14 @@ cdef class PyBladerfDevice:
         async_data.pystream = <void*>pystream
         async_data.tx_complete = False
 
-        if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
-            raise raise_error('pybladerf_init_rx_stream', -8)
-        elif data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
+        # if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
+
+        if data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __rx_callback_SC16_Q11, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
         elif data_format == pybladerf_format.PYBLADERF_FORMAT_SC8_Q7:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __rx_callback_SC8_Q7, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
-
+        else:
+            raise raise_error('pybladerf_init_rx_stream', -8)
         if result < 0:
             free(async_data)
 
@@ -1743,12 +1744,14 @@ cdef class PyBladerfDevice:
         async_data.pystream = <void*>pystream
         async_data.tx_complete = False
 
-        if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
-            raise raise_error('pybladerf_init_tx_stream', -8)
-        elif data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
+        # if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
+
+        if data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __tx_callback_SC16_Q11, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
         elif data_format == pybladerf_format.PYBLADERF_FORMAT_SC8_Q7:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __tx_callback_SC8_Q7, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
+        else:
+            raise raise_error('pybladerf_init_tx_stream', -8)
 
         if result < 0:
             free(async_data)
