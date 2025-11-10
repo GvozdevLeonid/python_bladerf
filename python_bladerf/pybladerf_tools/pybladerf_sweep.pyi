@@ -11,6 +11,5 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
                     sweep_style: pybladerf.pybladerf_sweep_style = pybladerf.pybladerf_sweep_style.PYBLADERF_SWEEP_STYLE_INTERLEAVED, serial_number: str | None = None,
                     binary_output: bool = False, one_shot: bool = False, num_sweeps: int | None = None,
                     filename: str | None = None, queue: object | None = None,
-                    print_to_console: bool = True,
-                    ) -> None:
+                    print_to_console: bool = True) -> None:
     ...
