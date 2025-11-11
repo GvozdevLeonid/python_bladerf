@@ -234,7 +234,7 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
     cdef c_pybladerf.pybladerf_metadata meta = pybladerf.pybladerf_metadata()
 
     cdef cnp.ndarray buffer = np.empty(samples_per_scan if oversample else samples_per_scan * 2, dtype=np.int8 if oversample else np.int16)
-    cdef cnp.ndarray window = np.hanning(samples_per_scan)
+    cdef double divider = 1 / (128 if oversample else 2048)
 
     schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
 
@@ -260,7 +260,7 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
                 queue.put({
                     'start_frequency': scan_steps[sweep_step_read_ptr].frequency,
                     'stop_frequency': scan_steps[sweep_step_read_ptr].frequency + sample_rate,
-                    'raw_iq': (buffer - buffer.mean()) * window,
+                    'raw_iq': (buffer[::2] * divider + 1j * buffer[1::2] * divider).astype(np.complex64),
                     'timestamp': timestamp,
                 })
 
