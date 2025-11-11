@@ -127,7 +127,7 @@ cpdef void process_data(uint8_t device_id,
     global working_sdrs
 
     cdef cnp.ndarray window = np.hanning(fft_size)
-    cdef uint16_t divider = 1 / (128 if oversample else 2048)
+    cdef double divider = 1 / (128 if oversample else 2048)
 
     cdef cnp.ndarray data
     cdef cnp.ndarray raw_iq
