@@ -127,7 +127,7 @@ cpdef void process_data(uint8_t device_id,
     global working_sdrs
 
     cdef cnp.ndarray window = np.hanning(fft_size)
-    cdef uint16_t divider = 128 if oversample else 2048
+    cdef uint16_t divider = 1 / (128 if oversample else 2048)
 
     cdef cnp.ndarray data
     cdef cnp.ndarray raw_iq
@@ -239,14 +239,12 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
     cdef uint8_t device_id = init_signals()
     cdef uint8_t formated_channel = pybladerf.PYBLADERF_CHANNEL_RX(channel)
     cdef c_pybladerf.PyBladerfDevice device
-    cdef cbladerf.bladerf* c_device
     cdef uint64_t offset = 0
 
     if serial_number is None:
         device = pybladerf.pybladerf_open()
     else:
         device = pybladerf.pybladerf_open_by_serial(serial_number)
-    c_device = device.get_ptr()
 
     working_sdrs[device_id].store(1)
     sdr_ids[device.serialno] = device_id

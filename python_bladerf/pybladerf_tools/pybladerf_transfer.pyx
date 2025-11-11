@@ -123,7 +123,7 @@ cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
     cdef cnp.ndarray accepted_data
 
     cdef uint64_t samples_per_transfer = int(os.environ.get('pybladerf_transfer_samples_per_transfer', 65536))
-    cdef uint16_t divider = 128 if oversample else 2048
+    cdef double divider = 1 / (128 if oversample else 2048)
     cdef uint8_t bytes_per_sample = 2 if oversample else 4
     cdef cnp.ndarray buffer = np.empty(samples_per_transfer * 2, dtype=np.int8 if oversample else np.int16)
 
@@ -140,7 +140,7 @@ cpdef void rx_process(c_pybladerf.PyBladerfDevice device,
                 to_read = num_samples
             num_samples -= to_read
 
-        accepted_data = (buffer[:to_read * 2:2] / divider + 1j * buffer[1:to_read * 2:2] / divider).astype(np.complex64)
+        accepted_data = (buffer[:to_read * 2:2] * divider + 1j * buffer[1:to_read * 2:2] * divider).astype(np.complex64)
 
         if rx_buffer is not None:
             rx_buffer.append(accepted_data)
