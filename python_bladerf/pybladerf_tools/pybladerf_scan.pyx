@@ -186,7 +186,7 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
             frequency += sample_rate
 
         if print_to_console:
-            sys.stderr.write(f'Sweeping from {frequencies[2 * i] / 1e6} MHz to {frequencies[2 * i + 1] / 1e6} MHz\n')
+            sys.stderr.write(f'Scaning from {frequencies[2 * i] / 1e6} MHz to {frequencies[2 * i + 1] / 1e6} MHz\n')
 
     if len(calculated_frequencies) > 256:
         device.pybladerf_close()
@@ -203,15 +203,15 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
     device.pybladerf_sync_config(
         layout=pybladerf.pybladerf_channel_layout.PYBLADERF_RX_X1,
         data_format=pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META if oversample else pybladerf.pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META,
-        num_buffers=int(os.environ.get('pybladerf_sweep_num_buffers', 4096)),
-        buffer_size=int(os.environ.get('pybladerf_sweep_buffer_size', 8192)),
-        num_transfers=int(os.environ.get('pybladerf_sweep_num_transfers', 64)),
+        num_buffers=int(os.environ.get('pybladerf_scan_num_buffers', 4096)),
+        buffer_size=int(os.environ.get('pybladerf_scan_buffer_size', 8192)),
+        num_transfers=int(os.environ.get('pybladerf_scan_num_transfers', 64)),
         stream_timeout=0,
     )
     device.pybladerf_enable_module(formated_channel, True)
 
     cdef uint64_t time_1ms = int(sample_rate // 1000)
-    cdef uint64_t await_time = int(time_1ms * float(os.environ.get('pybladerf_sweep_await_time', 1.5)))
+    cdef uint64_t await_time = int(time_1ms * float(os.environ.get('pybladerf_scan_await_time', 1.5)))
     cdef uint16_t tune_steps = len(calculated_frequencies)
 
     cdef uint8_t free_rffe_profile = 0
@@ -222,13 +222,13 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
     cdef double time_prev = time.time()
     cdef double timestamp = time.time()
     cdef double time_difference = 0
-    cdef double sweep_rate = 0
+    cdef double scan_rate = 0
     cdef double time_now = 0
-    cdef uint64_t sweep_count = 0
+    cdef uint64_t scan_count = 0
     cdef uint32_t tune_step = 0
 
-    cdef uint8_t sweep_step_write_ptr = 0
-    cdef uint8_t sweep_step_read_ptr = 0
+    cdef uint8_t scan_step_write_ptr = 0
+    cdef uint8_t scan_step_read_ptr = 0
     cdef ScanStep[8] scan_steps
 
     cdef c_pybladerf.pybladerf_metadata meta = pybladerf.pybladerf_metadata()
@@ -242,9 +242,9 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
         quick_tunes[tune_step][1].rffe_profile = free_rffe_profile
         device.pybladerf_schedule_retune(formated_channel, schedule_timestamp, 0, quick_tunes[tune_step][1])
 
-        scan_steps[sweep_step_write_ptr].frequency = quick_tunes[tune_step][0]
-        scan_steps[sweep_step_write_ptr].schedule_time = schedule_timestamp + await_time
-        sweep_step_write_ptr = (sweep_step_write_ptr + 1) % 8
+        scan_steps[scan_step_write_ptr].frequency = quick_tunes[tune_step][0]
+        scan_steps[scan_step_write_ptr].schedule_time = schedule_timestamp + await_time
+        scan_step_write_ptr = (scan_step_write_ptr + 1) % 8
 
         free_rffe_profile = (free_rffe_profile + 1) % rffe_profiles
         schedule_timestamp += await_time + samples_per_scan
@@ -252,75 +252,75 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
 
     while working_sdrs[device_id].load():
 
-            meta.timestamp = scan_steps[sweep_step_read_ptr].schedule_time
+        meta.timestamp = scan_steps[scan_step_read_ptr].schedule_time
 
-            try:
-                timestamp = time.time()
-                device.pybladerf_sync_rx(buffer, samples_per_scan, meta, 0)
-                queue.put({
-                    'start_frequency': scan_steps[sweep_step_read_ptr].frequency,
-                    'stop_frequency': scan_steps[sweep_step_read_ptr].frequency + sample_rate,
-                    'raw_iq': (buffer[::2] * divider + 1j * buffer[1::2] * divider).astype(np.complex64),
-                    'timestamp': timestamp,
-                })
+        try:
+            timestamp = time.time()
+            device.pybladerf_sync_rx(buffer, samples_per_scan, meta, 0)
+            queue.put({
+                'start_frequency': scan_steps[scan_step_read_ptr].frequency,
+                'stop_frequency': scan_steps[scan_step_read_ptr].frequency + sample_rate,
+                'raw_iq': (buffer[::2] * divider + 1j * buffer[1::2] * divider).astype(np.complex64),
+                'timestamp': timestamp,
+            })
 
-                sweep_step_read_ptr = (sweep_step_read_ptr + 1) % 8
+            scan_step_read_ptr = (scan_step_read_ptr + 1) % 8
 
+            quick_tunes[tune_step][1].rffe_profile = free_rffe_profile
+            device.pybladerf_schedule_retune(formated_channel, schedule_timestamp, 0, quick_tunes[tune_step][1])
+
+            scan_steps[scan_step_write_ptr].frequency = quick_tunes[tune_step][0]
+            scan_steps[scan_step_write_ptr].schedule_time = schedule_timestamp + await_time
+            scan_step_write_ptr = (scan_step_write_ptr + 1) % 8
+
+            free_rffe_profile = (free_rffe_profile + 1) % rffe_profiles
+            schedule_timestamp += await_time + samples_per_scan
+            tune_step = (tune_step + 1) % tune_steps
+
+            accepted_samples += samples_per_scan
+
+        except pybladerf.PYBLADERF_ERR_TIME_PAST:
+            sys.stderr.write("Timestamp is in the past, restarting...\n")
+
+            tune_step = 0
+            free_rffe_profile = 0
+            scan_step_read_ptr = 0
+            scan_step_write_ptr = 0
+
+            schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
+
+            for i in range(8):
                 quick_tunes[tune_step][1].rffe_profile = free_rffe_profile
                 device.pybladerf_schedule_retune(formated_channel, schedule_timestamp, 0, quick_tunes[tune_step][1])
 
-                scan_steps[sweep_step_write_ptr].frequency = quick_tunes[tune_step][0]
-                scan_steps[sweep_step_write_ptr].schedule_time = schedule_timestamp + await_time
-                sweep_step_write_ptr = (sweep_step_write_ptr + 1) % 8
+                scan_steps[scan_step_write_ptr].frequency = quick_tunes[tune_step][0]
+                scan_steps[scan_step_write_ptr].schedule_time = schedule_timestamp + await_time
+                scan_step_write_ptr = (scan_step_write_ptr + 1) % 8
 
                 free_rffe_profile = (free_rffe_profile + 1) % rffe_profiles
                 schedule_timestamp += await_time + samples_per_scan
                 tune_step = (tune_step + 1) % tune_steps
+            continue
 
-                accepted_samples += samples_per_scan
+        except pybladerf.PYBLADERF_ERR as ex:
+            sys.stderr.write("pybladerf_sync_rx() failed: %s %d", cbladerf.bladerf_strerror(ex.code), ex.code)
+            working_sdrs[device_id].store(0)
+            break
 
-            except pybladerf.PYBLADERF_ERR_TIME_PAST:
-                sys.stderr.write("Timestamp is in the past, restarting...\n")
+        time_now = time.time()
+        time_difference = time_now - time_prev
+        if time_difference >= 1.0:
+            if print_to_console:
+                scan_rate = scan_count / (time_now - time_start)
+                sys.stderr.write(f'{scan_count} total scans completed, {round(scan_rate, 2)} scans/second\n')
 
-                tune_step = 0
-                free_rffe_profile = 0
-                sweep_step_read_ptr = 0
-                sweep_step_write_ptr = 0
-
-                schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
-
-                for i in range(8):
-                    quick_tunes[tune_step][1].rffe_profile = free_rffe_profile
-                    device.pybladerf_schedule_retune(formated_channel, schedule_timestamp, 0, quick_tunes[tune_step][1])
-
-                    scan_steps[sweep_step_write_ptr].frequency = quick_tunes[tune_step][0]
-                    scan_steps[sweep_step_write_ptr].schedule_time = schedule_timestamp + await_time
-                    sweep_step_write_ptr = (sweep_step_write_ptr + 1) % 8
-
-                    free_rffe_profile = (free_rffe_profile + 1) % rffe_profiles
-                    schedule_timestamp += await_time + samples_per_scan
-                    tune_step = (tune_step + 1) % tune_steps
-                continue
-
-            except pybladerf.PYBLADERF_ERR as ex:
-                sys.stderr.write("pybladerf_sync_rx() failed: %s %d", cbladerf.bladerf_strerror(ex.code), ex.code)
-                working_sdrs[device_id].store(0)
+            if accepted_samples == 0:
+                if print_to_console:
+                    sys.stderr.write("Couldn\'t transfer any data for one second.\n")
                 break
 
-            time_now = time.time()
-            time_difference = time_now - time_prev
-            if time_difference >= 1.0:
-                if print_to_console:
-                    sweep_rate = sweep_count / (time_now - time_start)
-                    sys.stderr.write(f'{sweep_count} total sweeps completed, {round(sweep_rate, 2)} sweeps/second\n')
-
-                if accepted_samples == 0:
-                    if print_to_console:
-                        sys.stderr.write("Couldn\'t transfer any data for one second.\n")
-                    break
-
-                accepted_samples = 0
-                time_prev = time_now
+            accepted_samples = 0
+            time_prev = time_now
 
     if print_to_console:
         if not working_sdrs[device_id].load():
@@ -333,11 +333,11 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
 
     time_now = time.time()
     time_difference = time_now - time_prev
-    if sweep_rate == 0 and time_difference > 0:
-        sweep_rate = sweep_count / (time_now - time_start)
+    if scan_rate == 0 and time_difference > 0:
+        scan_rate = scan_count / (time_now - time_start)
 
     if print_to_console:
-        sys.stderr.write(f'Total sweeps: {sweep_count} in {time_now - time_start:.5f} seconds ({sweep_rate :.2f} sweeps/second)\n')
+        sys.stderr.write(f'Total scans: {scan_count} in {time_now - time_start:.5f} seconds ({scan_rate :.2f} scans/second)\n')
 
     if antenna_enable:
         try:
