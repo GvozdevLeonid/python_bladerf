@@ -482,8 +482,8 @@ def pybladerf_transfer(frequency: int | None = None, sample_rate: int = 10_000_0
             sys.stderr.write('\nExiting... [ pybladerf streaming stopped ]\n')
 
     working_sdrs[device_id].store(0)
-    sdr_ids.pop(device.serialno, None)
     close_ready.wait()
+    sdr_ids.pop(device.serialno, None)
 
     trigger.role = pybladerf.pybladerf_trigger_role.PYBLADERF_TRIGGER_ROLE_DISABLED
     device.pybladerf_trigger_arm(trigger, False)
