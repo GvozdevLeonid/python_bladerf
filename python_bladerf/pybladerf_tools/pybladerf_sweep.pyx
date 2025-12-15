@@ -468,6 +468,7 @@ def pybladerf_sweep(frequencies: list[int] | None = None, sample_rate: int = 61_
             sweep_step_write_ptr = 0
 
             schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
+            device.pybladerf_cancel_scheduled_retunes(formated_channel)
             empty_raw_data_queue.put(buffer)
 
             for i in range(8):

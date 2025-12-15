@@ -288,6 +288,7 @@ def pybladerf_scan(frequencies: list[int], samples_per_scan: int, queue: object,
             scan_step_write_ptr = 0
 
             schedule_timestamp = device.pybladerf_get_timestamp(pybladerf.pybladerf_direction.PYBLADERF_RX) + time_1ms * 150
+            device.pybladerf_cancel_scheduled_retunes(formated_channel)
 
             for i in range(8):
                 quick_tunes[tune_step][1].rffe_profile = free_rffe_profile
