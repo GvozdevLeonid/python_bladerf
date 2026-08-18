@@ -326,6 +326,7 @@ cdef extern from 'libbladeRF.h' nogil:
 
     ctypedef enum bladerf_format:
         BLADERF_FORMAT_SC16_Q11
+        BLADERF_FORMAT_SC16_Q11_PACKED
         BLADERF_FORMAT_SC16_Q11_META
         BLADERF_FORMAT_PACKET_META
         BLADERF_FORMAT_SC8_Q7
@@ -402,6 +403,7 @@ cdef extern from 'libbladeRF.h' nogil:
         BLADERF_IMAGE_TYPE_RX_IQ_CAL
         BLADERF_IMAGE_TYPE_TX_IQ_CAL
         BLADERF_IMAGE_TYPE_FPGA_A5
+        BLADERF_IMAGE_TYPE_GAIN_CAL
 
     const int BLADERF_IMAGE_MAGIC_LEN
 
