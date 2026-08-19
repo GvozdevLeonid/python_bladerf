@@ -1708,6 +1708,8 @@ cdef class PyBladerfDevice:
         if isinstance(metadata, pybladerf_metadata):
             metadata_link = metadata
             c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+        else:
+            self.__check_metadata_required(1, 'pybladerf_sync_tx')
 
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1725,6 +1727,8 @@ cdef class PyBladerfDevice:
         if isinstance(metadata, pybladerf_metadata):
             metadata_link = metadata
             c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+        else:
+            self.__check_metadata_required(0, 'pybladerf_sync_rx')
 
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1734,6 +1738,33 @@ cdef class PyBladerfDevice:
         with nogil:
             result = cbladerf.bladerf_sync_rx(self.__bladerf_device, c_samples_ptr, c_num_samples, c_metadata_ptr, c_timeout_ms)
         raise_error('pybladerf_sync_rx()', result)
+
+    def __check_metadata_required(self, direction: int, caller: str) -> None:
+        """Refuse a metadata-format transfer that was given no metadata.
+
+        A stream configured with a *_META format carries per-buffer
+        timestamps and flags. Passing metadata=None leaves libbladeRF with
+        nowhere to report them, so the caller silently loses the timestamp
+        it needs and bladerf_get_timestamp() keeps returning 0. Nothing in
+        the error path points at the real cause, so this reads as dead
+        hardware rather than a mismatched call.
+
+        Measured on a TX1 -> 50 dB pad -> RX1 loopback: with SC16_Q11 the
+        frame timestamp stayed at 762229041 across 8 consecutive reads and
+        get_timestamp() returned 0, so consecutive gain steps analysed the
+        same buffer and the gain ladder came out non-monotonic.
+        """
+        cfg = self.__sync_config.get(direction)
+        if cfg is None:
+            return
+        fmt = int(cfg[1])
+        if fmt in (int(pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META),
+                   int(pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META)):
+            raise RuntimeError(
+                f'{caller}(): stream is configured with a metadata format '
+                f'({pybladerf_format(fmt)}) but metadata=None was passed. '
+                'Timestamps and flags would be lost silently; pass a '
+                'pybladerf_metadata instance.')
 
     def pybladerf_init_rx_stream(self, num_buffers: int, data_format: pybladerf_format, samples_per_buffer: int, num_transfers: int) -> pybladerf_stream:
         cdef pybladerf_stream pystream = pybladerf_stream()
