@@ -1318,6 +1318,10 @@ cdef class PyBladerfDevice:
 
     def __cinit__(self):
         self.__bladerf_device = NULL
+        # Last sync_config() per direction (0 = RX, 1 = TX) and which
+        # directions libbladeRF has torn down via enable_module(False).
+        self.__sync_config = {}
+        self.__sync_torn_down = set()
 
     def __dealloc__(self):
         global global_callbacks
@@ -1656,8 +1660,28 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_deinterleave_stream_buffer()', result)
 
     def pybladerf_enable_module(self, channel: int, enable: bool) -> None:
+        # libbladeRF tears the synchronous stream down when a direction is
+        # disabled (rfic_host.c calls sync_deinit() on !dir_enable, and
+        # bladerf1.c does the same).  This is documented behaviour, but
+        # re-enabling the module does NOT bring the stream back: every
+        # later bladerf_sync_tx()/sync_rx() then fails with
+        #     "sync tx invalid: not initialized"
+        # which gives no hint that sync_config() has to be repeated.
+        #
+        # Remember the last configuration per direction and restore it on
+        # re-enable, so a disable/enable cycle keeps working.
         result = cbladerf.bladerf_enable_module(self.__bladerf_device, channel, enable)
         raise_error('pybladerf_enable_module()', result)
+
+        direction = 1 if (channel & 1) else 0          # TX channels are odd
+        if not enable:
+            self.__sync_torn_down.add(direction)
+            return
+        if direction in self.__sync_torn_down:
+            self.__sync_torn_down.discard(direction)
+            cfg = self.__sync_config.get(direction)
+            if cfg is not None:
+                self.pybladerf_sync_config(*cfg)
 
     def pybladerf_get_timestamp(self, direction: pybladerf_direction) -> int:
         cdef uint64_t timestamp
@@ -1668,6 +1692,14 @@ cdef class PyBladerfDevice:
     def pybladerf_sync_config(self, layout: pybladerf_channel_layout, data_format: pybladerf_format, num_buffers: int, buffer_size: int, num_transfers: int, stream_timeout: int) -> None:
         result = cbladerf.bladerf_sync_config(self.__bladerf_device, layout, data_format, <unsigned int> num_buffers, <unsigned int> buffer_size, <unsigned int> num_transfers, <unsigned int> stream_timeout)
         raise_error('pybladerf_sync_config()', result)
+
+        # Keep the settings so pybladerf_enable_module() can restore the
+        # stream after libbladeRF tears it down on disable.
+        direction = 1 if (int(layout) & 1) else 0      # TX layouts are odd
+        self.__sync_config[direction] = (layout, data_format, num_buffers,
+                                         buffer_size, num_transfers,
+                                         stream_timeout)
+        self.__sync_torn_down.discard(direction)
 
     def pybladerf_sync_tx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         cdef cbladerf.bladerf_metadata *c_metadata_ptr = NULL
