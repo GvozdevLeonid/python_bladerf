@@ -104,6 +104,10 @@ cdef class pybladerf_stream:
 cdef class PyBladerfDevice:
     cdef cbladerf.bladerf *__bladerf_device
     cdef public str serialno
+    # Last sync_config() arguments per direction, so the stream can be
+    # restored after libbladeRF tears it down on enable_module(False).
+    cdef dict __sync_config
+    cdef set __sync_torn_down
 
     cdef cbladerf.bladerf *get_ptr(self)
 

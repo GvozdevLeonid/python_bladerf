@@ -1320,6 +1320,10 @@ cdef class PyBladerfDevice:
 
     def __cinit__(self):
         self.__bladerf_device = NULL
+        # Last sync_config() per direction (0 = RX, 1 = TX) and which
+        # directions libbladeRF has torn down via enable_module(False).
+        self.__sync_config = {}
+        self.__sync_torn_down = set()
 
     def __dealloc__(self):
         global global_callbacks
@@ -1658,8 +1662,28 @@ cdef class PyBladerfDevice:
         raise_error('pybladerf_deinterleave_stream_buffer()', result)
 
     def pybladerf_enable_module(self, channel: int, enable: bool) -> None:
+        # libbladeRF tears the synchronous stream down when a direction is
+        # disabled (rfic_host.c calls sync_deinit() on !dir_enable, and
+        # bladerf1.c does the same).  This is documented behaviour, but
+        # re-enabling the module does NOT bring the stream back: every
+        # later bladerf_sync_tx()/sync_rx() then fails with
+        #     "sync tx invalid: not initialized"
+        # which gives no hint that sync_config() has to be repeated.
+        #
+        # Remember the last configuration per direction and restore it on
+        # re-enable, so a disable/enable cycle keeps working.
         result = cbladerf.bladerf_enable_module(self.__bladerf_device, channel, enable)
         raise_error('pybladerf_enable_module()', result)
+
+        direction = 1 if (channel & 1) else 0          # TX channels are odd
+        if not enable:
+            self.__sync_torn_down.add(direction)
+            return
+        if direction in self.__sync_torn_down:
+            self.__sync_torn_down.discard(direction)
+            cfg = self.__sync_config.get(direction)
+            if cfg is not None:
+                self.pybladerf_sync_config(*cfg)
 
     def pybladerf_get_timestamp(self, direction: pybladerf_direction) -> int:
         cdef uint64_t timestamp
@@ -1671,6 +1695,14 @@ cdef class PyBladerfDevice:
         result = cbladerf.bladerf_sync_config(self.__bladerf_device, layout, data_format, <unsigned int> num_buffers, <unsigned int> buffer_size, <unsigned int> num_transfers, <unsigned int> stream_timeout)
         raise_error('pybladerf_sync_config()', result)
 
+        # Keep the settings so pybladerf_enable_module() can restore the
+        # stream after libbladeRF tears it down on disable.
+        direction = 1 if (int(layout) & 1) else 0      # TX layouts are odd
+        self.__sync_config[direction] = (layout, data_format, num_buffers,
+                                         buffer_size, num_transfers,
+                                         stream_timeout)
+        self.__sync_torn_down.discard(direction)
+
     def pybladerf_sync_tx(self, samples: np.ndarray[Any, Any], num_samples: int, metadata: pybladerf_metadata | None = None, timeout_ms: int = 0) -> None:
         cdef cbladerf.bladerf_metadata *c_metadata_ptr = NULL
         cdef pybladerf_metadata metadata_link
@@ -1678,6 +1710,8 @@ cdef class PyBladerfDevice:
         if isinstance(metadata, pybladerf_metadata):
             metadata_link = metadata
             c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+        else:
+            self.__check_metadata_required(1, 'pybladerf_sync_tx')
 
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1695,6 +1729,8 @@ cdef class PyBladerfDevice:
         if isinstance(metadata, pybladerf_metadata):
             metadata_link = metadata
             c_metadata_ptr = <cbladerf.bladerf_metadata*> metadata_link.get_ptr()
+        else:
+            self.__check_metadata_required(0, 'pybladerf_sync_rx')
 
         cdef unsigned int c_num_samples = <unsigned int> num_samples
         cdef unsigned int c_timeout_ms = <unsigned int> timeout_ms
@@ -1704,6 +1740,33 @@ cdef class PyBladerfDevice:
         with nogil:
             result = cbladerf.bladerf_sync_rx(self.__bladerf_device, c_samples_ptr, c_num_samples, c_metadata_ptr, c_timeout_ms)
         raise_error('pybladerf_sync_rx()', result)
+
+    def __check_metadata_required(self, direction: int, caller: str) -> None:
+        """Refuse a metadata-format transfer that was given no metadata.
+
+        A stream configured with a *_META format carries per-buffer
+        timestamps and flags. Passing metadata=None leaves libbladeRF with
+        nowhere to report them, so the caller silently loses the timestamp
+        it needs and bladerf_get_timestamp() keeps returning 0. Nothing in
+        the error path points at the real cause, so this reads as dead
+        hardware rather than a mismatched call.
+
+        Measured on a TX1 -> 50 dB pad -> RX1 loopback: with SC16_Q11 the
+        frame timestamp stayed at 762229041 across 8 consecutive reads and
+        get_timestamp() returned 0, so consecutive gain steps analysed the
+        same buffer and the gain ladder came out non-monotonic.
+        """
+        cfg = self.__sync_config.get(direction)
+        if cfg is None:
+            return
+        fmt = int(cfg[1])
+        if fmt in (int(pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META),
+                   int(pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META)):
+            raise RuntimeError(
+                f'{caller}(): stream is configured with a metadata format '
+                f'({pybladerf_format(fmt)}) but metadata=None was passed. '
+                'Timestamps and flags would be lost silently; pass a '
+                'pybladerf_metadata instance.')
 
     def pybladerf_init_rx_stream(self, num_buffers: int, data_format: pybladerf_format, samples_per_buffer: int, num_transfers: int) -> pybladerf_stream:
         cdef pybladerf_stream pystream = pybladerf_stream()
