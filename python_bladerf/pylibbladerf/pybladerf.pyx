@@ -1711,19 +1711,14 @@ cdef class PyBladerfDevice:
         cdef void **buffers
         cdef int result = -1
 
-        # SC16_Q11 and SC16_Q11_META carry 16-bit I and Q, so 4 bytes per
-        # sample; the SC8_Q7 formats carry 8-bit I and Q, so 2 bytes.
-        async_data.bytes_per_sample = 2 if data_format in (
-            pybladerf_format.PYBLADERF_FORMAT_SC8_Q7,
-            pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META,
-        ) else 4
+        # SC16_Q11 carry 16-bit I and Q, so 4 bytes per sample;
+        # SC8_Q7 formats carry 8-bit I and Q, so 2 bytes.
+        async_data.bytes_per_sample = 2 if data_format in pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 else 4
         async_data.package_size = USB_PACKAGE_SIZE_SS if self.pybladerf_device_speed() == pybladerf_dev_speed.PYBLADERF_DEVICE_SPEED_SUPER else USB_PACKAGE_SIZE_HS
         async_data.packages_per_buffer = samples_per_buffer // (async_data.package_size // async_data.bytes_per_sample)
         async_data.samples_per_package = (samples_per_buffer - PYMETADATA_HEADER_SIZE) // async_data.bytes_per_sample
         async_data.pystream = <void*>pystream
         async_data.tx_complete = False
-
-        # if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
 
         if data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __rx_callback_SC16_Q11, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
@@ -1744,19 +1739,14 @@ cdef class PyBladerfDevice:
         cdef void **buffers
         cdef int result = -1
 
-        # SC16_Q11 and SC16_Q11_META carry 16-bit I and Q, so 4 bytes per
-        # sample; the SC8_Q7 formats carry 8-bit I and Q, so 2 bytes.
-        async_data.bytes_per_sample = 2 if data_format in (
-            pybladerf_format.PYBLADERF_FORMAT_SC8_Q7,
-            pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META,
-        ) else 4
+        # SC16_Q11 carry 16-bit I and Q, so 4 bytes per sample;
+        # SC8_Q7 formats carry 8-bit I and Q, so 2 bytes.
+        async_data.bytes_per_sample = 2 if data_format in pybladerf_format.PYBLADERF_FORMAT_SC8_Q7 else 4
         async_data.package_size = USB_PACKAGE_SIZE_SS if self.pybladerf_device_speed() == pybladerf_dev_speed.PYBLADERF_DEVICE_SPEED_SUPER else USB_PACKAGE_SIZE_HS
         async_data.packages_per_buffer = samples_per_buffer // (async_data.package_size // async_data.bytes_per_sample)
         async_data.samples_per_package = (samples_per_buffer - PYMETADATA_HEADER_SIZE) // async_data.bytes_per_sample
         async_data.pystream = <void*>pystream
         async_data.tx_complete = False
-
-        # if data_format in {pybladerf_format.PYBLADERF_FORMAT_SC16_Q11_META, pybladerf_format.PYBLADERF_FORMAT_SC8_Q7_META}:
 
         if data_format == pybladerf_format.PYBLADERF_FORMAT_SC16_Q11:
             result = cbladerf.bladerf_init_stream(pystream.get_double_ptr(), self.__bladerf_device, __tx_callback_SC16_Q11, &buffers, <size_t> num_buffers, data_format, <size_t> samples_per_buffer, <size_t> num_transfers, <void*> async_data)
